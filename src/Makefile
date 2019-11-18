@@ -8,6 +8,7 @@ TESTS := $(wildcard *_test.cpp)
 .PHONY: tests
 tests: build $(TESTS:%.cpp=$(TEST_DIR)/%.out)
 
+.PHONY: $(TEST_DIR)/%_test.out
 $(TEST_DIR)/%_test.out: %_test.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 

@@ -3,9 +3,15 @@
 #include "linear_cdf_model.h"
 using namespace std;
 
-int main(void) {
-    vector<double> data = {1.0,2.0,3.0,4.0,5.0,6.0,7.0};
+void test1(void) {
+    vector<double> data = {5.0,7.0,9.0,11.0,13.0,15.0,17.0,19.0,21.0,23.0};
     linearModel model = fitLinearCdf(data);
-    assert(model.bias == 0);
-    assert(model.slope == 1);
+    cout << "test1 model: " << endl;
+    model.print();
+    cout << (model.predict(7.0) * data.size()) << " should equal 2" << endl;
+    cout << (model.predict(13.0) * data.size()) << " should equal 5" << endl;
+}
+
+int main(void) {
+    test1();   
 }
