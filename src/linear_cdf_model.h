@@ -63,11 +63,11 @@ public:
         s_xx += d * d;
     }
     linearModel fit() {
-        double s_y = n * (n+1) / 2;
-        double slope = (n*s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
+        double s_y = (n+1) / 2;
+        double slope = (s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
         return linearModel(
-            (s_y - slope*s_x) / (n * n),
-            slope / n
+            (s_y - slope*s_x) / n,
+            slope
         );
     }
 };
