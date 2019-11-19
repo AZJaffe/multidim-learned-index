@@ -24,13 +24,13 @@ public:
 // D is the dimension of the data
 template <uint D>
 class PTree {
-    double * data; // For now, index one array instead of leaves pointing to data pages
+    vector<array<double, D>> data; // Data is an array of arrays of doubles of size D
     uint fanout;
-    uint height; // e.g. a tree where the root is leaf has height 1
+    uint height; // e.g. a tree where the root is a leaf has height 1
 
     struct node {
         node children[MAX_FANOUT];
-        double projection[D];
+        array<double, D> projection;
         linearModel model;
         bool isLeaf;
         // start and end will only be used if isLeaf is true.
@@ -38,11 +38,32 @@ class PTree {
         int start; 
         int end;
     };
-    public:
     node * root;
-    PTree(double data[], uint fanout, uint height) :
-    fanout(fanout), height(height), data(data) {
 
+    void pairSort(uint start, uint end, array<double, D> proj) {
+        int length = end - start;
+        pair<int, array<double, D>> * paired = new pair<int, array<double, D>>[length];
+        for(int i = 0; i < length; i++) {
+            paired[i].first = dotProduct(data[i+start], proj);
+            paired[i].second = data[i+start];
+        }
+        std::sort(paired->begin(), paired->end());
+        for(int i = 0; i < length; i++) {
+            data[i+start] = paired[i].second;
+        }
+        delete[] paired;
+        return;
+    }
+
+    public:
+    PTree(std::vector<std::array<double, D>> data, uint fanout) :
+    fanout(fanout), height(1), data(data) {
+        root = new node();
+        for(int i = 1; i < D; i++) {
+            root->projection[i] = 0;
+        }
+        root->projection[0] = 1;
+        pairSort(0, data.size(), root->projection);
     }
 };
 
