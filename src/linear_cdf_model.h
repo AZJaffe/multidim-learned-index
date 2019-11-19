@@ -49,7 +49,7 @@ class PTree {
 // linearCdfRegressor builds a linear model from
 // a stream of data points in sorted order.
 // (1) Pass the (sorted) data points one at a time into add
-// (2) Call build()
+// (2) Call fit()
 // TODO(?): This class assumes data is made up of unique values, remove this assumption if necessary
 class linearCdfRegressor {
 public:
@@ -62,7 +62,7 @@ public:
         s_x += d;
         s_xx += d * d;
     }
-    linearModel build() {
+    linearModel fit() {
         double s_y = n * (n+1) / 2;
         double slope = (n*s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
         return linearModel(
