@@ -20,7 +20,7 @@ class PiTree {
 
     struct node {
         node children[MAX_FANOUT];
-        array<double, D> projection;
+        array<double, D> proj;
         LinearModel model;
         bool isLeaf;
         // start and end will only be used if isLeaf is true.
@@ -35,10 +35,17 @@ class PiTree {
     fanout(fanout), height(1), data(data) {
         root = new node();
         for(int i = 1; i < D; i++) {
-            root->projection[i] = 0;
+            root->proj[i] = 0;
         }
-        root->projection[0] = 1;
-        pairSort(0, data.size(), root->projection);
+        root->proj[0] = 1;
+        pairSort(0, data.size(), root->proj);
+        LinearCdfRegressor builder = LinearCdfRegressor();
+        for (size_t i = 0; i < data.size(); i++) {
+            builder.add(
+                inner_product(data[i].begin(), data[i].end(), proj.begin(), 0)
+            );
+        }
+        root->model = builder.fit();
     }
 };
 
@@ -48,7 +55,7 @@ void pairSort(vector<array<double, D>> &data, uint start, uint end, array<double
     vector<pair<int, array<double, D>>> paired;
     for(int i = 0; i < length; i++) {
         paired.push_back(make_pair(
-            inner_product(data[i+start].begin(), data[i+end].end(), proj.begin(), 0),
+            inner_product(data[i+start].begin(), data[i+start].end(), proj.begin(), 0),
             data[i+start]
         ));
     }
