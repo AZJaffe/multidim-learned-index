@@ -4,9 +4,12 @@
 #define MAX_FANOUT 10
 
 using namespace std;
-#include <vector>
-#include <iostream>
+#include <array>
 #include <iomanip>
+#include <iostream>
+#include <numeric>
+#include <vector>
+#include "linear_cdf_regressor.h"
 
 // D is the dimension of the data
 template <uint D>
@@ -18,7 +21,7 @@ class PiTree {
     struct node {
         node children[MAX_FANOUT];
         array<double, D> projection;
-        linearModel model;
+        LinearModel model;
         bool isLeaf;
         // start and end will only be used if isLeaf is true.
         // they correspond to the starting and ending indecies of the data this leaf indexes
@@ -28,7 +31,7 @@ class PiTree {
     node * root;
 
     public:
-    PTree(std::vector<std::array<double, D>> data, uint fanout) :
+    PiTree(std::vector<std::array<double, D>> data, uint fanout) :
     fanout(fanout), height(1), data(data) {
         root = new node();
         for(int i = 1; i < D; i++) {
@@ -40,17 +43,18 @@ class PiTree {
 };
 
 template <uint D>
-void pairSort(vector<array<double, D>> data, uint start, uint end, array<double, D> proj) {
-    int length = end - start;
-    pair<int, array<double, D>> * paired = new pair<int, array<double, D>>[length];
+void pairSort(vector<array<double, D>> &data, uint start, uint end, array<double, D> proj) {
+    int length = end - start + 1;
+    vector<pair<int, array<double, D>>> paired;
     for(int i = 0; i < length; i++) {
-        paired[i].first = dotProduct(data[i+start], proj);
-        paired[i].second = data[i+start];
+        paired.push_back(make_pair(
+            inner_product(data[i+start].begin(), data[i+end].end(), proj.begin(), 0),
+            data[i+start]
+        ));
     }
-    std::sort(paired->begin(), paired->end());
+    std::sort(paired.begin(), paired.end());
     for(int i = 0; i < length; i++) {
         data[i+start] = paired[i].second;
     }
-    delete[] paired;
     return;
 }
