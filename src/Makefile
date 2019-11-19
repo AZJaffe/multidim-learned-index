@@ -4,12 +4,13 @@ BUILD_DIR := ./build
 TEST_DIR := $(BUILD_DIR)/test
 
 TESTS := $(wildcard *_test.cpp)
+SRCS := $(filter-out $(TESTS),$(wildcard *.h))
 
 .PHONY: tests
 tests: build $(TESTS:%.cpp=$(TEST_DIR)/%.out)
 
 tests: build
-$(TEST_DIR)/linear_cdf_model_test.out: linear_cdf_model_test.cpp linear_cdf_model.h
+$(TEST_DIR)/%_test.out: %_test.cpp $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 .PHONY: build
@@ -19,3 +20,6 @@ build:
 .PHONY: clean
 clean:
 	@rm -r $(BUILD_DIR)
+
+echo:
+	@echo srcs: $(SRCS) tests: $(TESTS)
