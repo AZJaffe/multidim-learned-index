@@ -6,6 +6,7 @@
 using namespace std;
 #include <vector>
 #include <iostream>
+#include <iomanip>
 
 struct linearModel {
 public:
@@ -53,7 +54,7 @@ class PTree {
 class linearCdfModelBuilder {
 public:
     double s_xy, s_x, s_xx;
-    uint n; // number of data points seen so far
+    double n; // number of data points seen so far
     linearCdfModelBuilder() : s_xy(0), s_x(0), s_xx(0), n(0) {}
     void add(double d) {
         n++;
@@ -62,12 +63,11 @@ public:
         s_xx += d * d;
     }
     linearModel build() {
-        double s_y = (n+1) / 2;
-        cout << "s_y=" << s_y << " s_xy=" << s_xy << " s_x=" << s_x << " s_xx=" << s_xx << endl;
-        double slope = (s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
+        double s_y = n * (n+1) / 2;
+        double slope = (n*s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
         return linearModel(
-            (s_y - slope*s_x) / n,
-            slope
+            (s_y - slope*s_x) / (n * n),
+            slope / n
         );
     }
 };
