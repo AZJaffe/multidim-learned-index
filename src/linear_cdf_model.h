@@ -46,16 +46,16 @@ class PTree {
     }
 };
 
-// linearCdfModelBuilder builds a linear model from
+// linearCdfRegressor builds a linear model from
 // a stream of data points in sorted order.
 // (1) Pass the (sorted) data points one at a time into add
 // (2) Call build()
 // TODO(?): This class assumes data is made up of unique values, remove this assumption if necessary
-class linearCdfModelBuilder {
+class linearCdfRegressor {
 public:
     double s_xy, s_x, s_xx;
     double n; // number of data points seen so far
-    linearCdfModelBuilder() : s_xy(0), s_x(0), s_xx(0), n(0) {}
+    linearCdfRegressor() : s_xy(0), s_x(0), s_xx(0), n(0) {}
     void add(double d) {
         n++;
         s_xy += d * n;
