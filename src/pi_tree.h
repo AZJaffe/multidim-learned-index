@@ -11,15 +11,17 @@ using namespace std;
 #include <vector>
 #include "linear_cdf_regressor.h"
 
-// D is the dimension of the data
-template <uint D>
+// D is the dimension of the key of the data, V is the type of the data values
+template <uint D, typename V>
 class PiTree {
-    vector<array<double, D>> data; // Data is an array of arrays of doubles of size D
+    typedef pair<array<double, D>, V> datum;
+
+    vector<datum> &data; // Data is an array of arrays of doubles of size D
     uint fanout;
     uint height; // e.g. a tree where the root is a leaf has height 1
 
     struct node {
-        node children[MAX_FANOUT];
+        //node * children;
         array<double, D> proj;
         LinearModel model;
         bool isLeaf;
@@ -27,14 +29,18 @@ class PiTree {
         // they correspond to the starting and ending indecies of the data this leaf indexes
         int start; 
         int end;
+        node() : model(LinearModel(0,0)) {}
     };
     node * root;
 
+    void pairSort(uint start, uint end, const array<double, D> &proj);
+    double dotProduct(const array<double, D> &v, const array<double, D> &w);
+
     public:
-    PiTree(std::vector<std::array<double, D>> data, uint fanout) :
-    fanout(fanout), height(1), data(data) {
+    PiTree(vector<datum> &data, uint fanout) :
+    data(data), fanout(fanout), height(1) {
         root = new node();
-        for(int i = 1; i < D; i++) {
+        for(size_t i = 1; i < D; i++) {
             root->proj[i] = 0;
         }
         root->proj[0] = 1;
@@ -42,20 +48,20 @@ class PiTree {
         LinearCdfRegressor builder = LinearCdfRegressor();
         for (size_t i = 0; i < data.size(); i++) {
             builder.add(
-                inner_product(data[i].begin(), data[i].end(), proj.begin(), 0)
+                dotProduct(data[i].first, root->proj)
             );
         }
         root->model = builder.fit();
     }
 };
 
-template <uint D>
-void pairSort(vector<array<double, D>> &data, uint start, uint end, array<double, D> proj) {
+template <uint D, typename V>
+void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
     int length = end - start + 1;
-    vector<pair<int, array<double, D>>> paired;
+    vector<pair<int, datum>> paired; // TODO do this without copying
     for(int i = 0; i < length; i++) {
         paired.push_back(make_pair(
-            inner_product(data[i+start].begin(), data[i+start].end(), proj.begin(), 0),
+            dotProduct(data[i+start].first, proj),
             data[i+start]
         ));
     }
@@ -64,4 +70,9 @@ void pairSort(vector<array<double, D>> &data, uint start, uint end, array<double
         data[i+start] = paired[i].second;
     }
     return;
+}
+
+template <uint D, typename V>
+double PiTree<D,V>::dotProduct(const array<double, D> &v, const array<double, D> &w) {
+    return inner_product(v.begin(), v.end(), w.begin(), 0);
 }
