@@ -18,7 +18,7 @@ class PiTree {
 
     vector<datum> &data; // Data is an array of arrays of doubles of size D
     uint fanout;
-    uint height; // e.g. a tree where the root is a leaf has height 1
+    uint height; // e.g. a tree where the node is a leaf has height 1
 
     struct node {
         //node * children;
@@ -33,6 +33,7 @@ class PiTree {
     };
     node * root;
 
+    node * buildSubTree(uint start, uint end, uint depth);
     void pairSort(uint start, uint end, const array<double, D> &proj);
     double dotProduct(const array<double, D> &v, const array<double, D> &w) {
         return inner_product(v.begin(), v.end(), w.begin(), 0);
@@ -45,21 +46,30 @@ public:
 template <uint D, typename V>
 PiTree<D,V>::PiTree(vector<datum> &data, uint fanout) :
 data(data), fanout(fanout) {
-   root = new node();
-    for(size_t i = 1; i < D; i++) {
-        root->proj[i] = 0;
+    root = buildSubTree(0, data.size(), 0);
+}
+
+template <uint D, typename V>
+PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) {
+    node * n = new node();
+    node->start = start;
+    node->end = end;
+    for(uint i = 0; i < D; i++) {
+        n->proj[i] = (i == depth % D) ? 1 : 0;
     }
-    root->proj[0] = 1;
-    pairSort(0, data.size(), root->proj);
+    pairSort(start, end, n->proj);
     LinearCdfRegressor builder = LinearCdfRegressor();
     for (size_t i = 0; i < data.size(); i++) {
         builder.add(
-            dotProduct(data[i].first, root->proj)
+            dotProduct(data[i].first, n->proj)
         );
     }
-    root->model = builder.fit();
+    n->model = builder.fit();
+    return n;
 }
 
+// sorts the vector of data between indices start and end according
+// to the ordering induced by the linear functional proj
 template <uint D, typename V>
 void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
     int length = end - start + 1;
