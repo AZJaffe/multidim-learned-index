@@ -17,16 +17,15 @@ class PiTree {
     typedef pair<array<double, D>, V> datum;
 
     vector<datum> &data; // Data is an array of arrays of doubles of size D
-    uint fanout;
+    uint fanout; // For now, this is constant
     uint height; // e.g. a tree where the node is a leaf has height 1
+    uint pageSize; // This is the upper bound on the page size.
 
     struct node {
-        //node * children;
+        vector<node *> children;
         array<double, D> proj;
         LinearModel model;
         bool isLeaf;
-        // start and end will only be used if isLeaf is true.
-        // they correspond to the starting and ending indecies of the data this leaf indexes
         int start; 
         int end;
         node() : model(LinearModel(0,0)) {}
@@ -40,12 +39,12 @@ class PiTree {
     }
 
 public:
-    PiTree(vector<datum> &data, uint fanout);
+    PiTree(vector<datum> &data, uint fanout, uint pageSize);
 };
 
 template <uint D, typename V>
-PiTree<D,V>::PiTree(vector<datum> &data, uint fanout) :
-data(data), fanout(fanout) {
+PiTree<D,V>::PiTree(vector<datum> &data, uint fanout, uint pageSize) :
+data(data), fanout(fanout), pageSize(pageSize) {
     root = buildSubTree(0, data.size(), 0);
 }
 
@@ -65,6 +64,27 @@ PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) 
         );
     }
     n->model = builder.fit();
+    node->isLeaf = (start - end < pageSize);
+    if (!node->isLeaf) {
+        uint childNum = 0;
+        uint childStart = 0;
+        double childMaxVal = 1 / fanout;
+        for(uint i = start; i < end; i++) {
+            double p = dotProduct(data[i].first, n->proj);
+            if (p >= childMaxVal) {
+                n->children.push_back(
+                    buildSubTree(childStart, i, depth+1)
+                );
+                childNum++;
+                childStart = i;
+                if (childNum == fanout - 1) {
+                    childMaxVal = DOUBLE_MAX;
+                } else {
+                    childMaxVal = (childNum + 1) / fanout;
+                }
+            }
+        }
+    }
     return n;
 }
 
