@@ -34,26 +34,31 @@ class PiTree {
     node * root;
 
     void pairSort(uint start, uint end, const array<double, D> &proj);
-    double dotProduct(const array<double, D> &v, const array<double, D> &w);
-
-    public:
-    PiTree(vector<datum> &data, uint fanout) :
-    data(data), fanout(fanout), height(1) {
-        root = new node();
-        for(size_t i = 1; i < D; i++) {
-            root->proj[i] = 0;
-        }
-        root->proj[0] = 1;
-        pairSort(0, data.size(), root->proj);
-        LinearCdfRegressor builder = LinearCdfRegressor();
-        for (size_t i = 0; i < data.size(); i++) {
-            builder.add(
-                dotProduct(data[i].first, root->proj)
-            );
-        }
-        root->model = builder.fit();
+    double dotProduct(const array<double, D> &v, const array<double, D> &w) {
+        return inner_product(v.begin(), v.end(), w.begin(), 0);
     }
+
+public:
+    PiTree(vector<datum> &data, uint fanout);
 };
+
+template <uint D, typename V>
+PiTree<D,V>::PiTree(vector<datum> &data, uint fanout) :
+data(data), fanout(fanout) {
+   root = new node();
+    for(size_t i = 1; i < D; i++) {
+        root->proj[i] = 0;
+    }
+    root->proj[0] = 1;
+    pairSort(0, data.size(), root->proj);
+    LinearCdfRegressor builder = LinearCdfRegressor();
+    for (size_t i = 0; i < data.size(); i++) {
+        builder.add(
+            dotProduct(data[i].first, root->proj)
+        );
+    }
+    root->model = builder.fit();
+}
 
 template <uint D, typename V>
 void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
@@ -70,9 +75,4 @@ void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
         data[i+start] = paired[i].second;
     }
     return;
-}
-
-template <uint D, typename V>
-double PiTree<D,V>::dotProduct(const array<double, D> &v, const array<double, D> &w) {
-    return inner_product(v.begin(), v.end(), w.begin(), 0);
 }

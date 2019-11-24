@@ -20,14 +20,14 @@ void testPairSort() {
     
     cout << "before:" << endl;
     for(auto n : data) {
-        printf("{(%1.0f, %1.0f), %d}", n.first[0], n.first[1], n.second);
+        printf("{(%1.0f, %1.0f), %d} ", n.first[0], n.first[1], n.second);
     }
     cout << endl;
     PiTree<D,int> *t = new PiTree<D,int>(data, 10);
     (void)*t;
     cout << "after:" << endl;
     for(auto n : data) {
-        printf("{(%1.0f, %1.0f), %d}", n.first[0], n.first[1], n.second);
+        printf("{(%1.0f, %1.0f), %d} ", n.first[0], n.first[1], n.second);
     }
     cout << endl;
 
