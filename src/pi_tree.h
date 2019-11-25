@@ -5,9 +5,11 @@
 
 using namespace std;
 #include <array>
-#include <iomanip>
+#include <cassert>
 #include <iostream>
+#include <limits>
 #include <numeric>
+#include <string>
 #include <vector>
 #include "linear_cdf_regressor.h"
 
@@ -34,25 +36,29 @@ class PiTree {
 
     node * buildSubTree(uint start, uint end, uint depth);
     void pairSort(uint start, uint end, const array<double, D> &proj);
+    void printSubTree(node * n, uint depth);
     double dotProduct(const array<double, D> &v, const array<double, D> &w) {
         return inner_product(v.begin(), v.end(), w.begin(), 0);
     }
 
 public:
     PiTree(vector<datum> &data, uint fanout, uint pageSize);
+    void printTree();
 };
 
 template <uint D, typename V>
 PiTree<D,V>::PiTree(vector<datum> &data, uint fanout, uint pageSize) :
 data(data), fanout(fanout), pageSize(pageSize) {
+    assert(fanout > 1);
+    assert(pageSize > 1);
     root = buildSubTree(0, data.size(), 0);
 }
 
 template <uint D, typename V>
-PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) {
+typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) {
     node * n = new node();
-    node->start = start;
-    node->end = end;
+    n->start = start;
+    n->end = end;
     for(uint i = 0; i < D; i++) {
         n->proj[i] = (i == depth % D) ? 1 : 0;
     }
@@ -64,26 +70,32 @@ PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) 
         );
     }
     n->model = builder.fit();
-    node->isLeaf = (start - end < pageSize);
-    if (!node->isLeaf) {
+    n->isLeaf = (start - end < pageSize);
+    if (!n->isLeaf) {
         uint childNum = 0;
         uint childStart = 0;
         double childMaxVal = 1 / fanout;
         for(uint i = start; i < end; i++) {
             double p = dotProduct(data[i].first, n->proj);
-            if (p >= childMaxVal) {
+            while (p >= childMaxVal) {
                 n->children.push_back(
                     buildSubTree(childStart, i, depth+1)
                 );
                 childNum++;
                 childStart = i;
                 if (childNum == fanout - 1) {
-                    childMaxVal = DOUBLE_MAX;
+                    childMaxVal = numeric_limits<double>::max();
                 } else {
                     childMaxVal = (childNum + 1) / fanout;
                 }
             }
         }
+        while(n->children.size() < fanout) {
+            n->children.push_back(
+                buildSubTree(end, end, depth+1)
+            );
+        }
+        assert(n->children.size() == fanout);
     }
     return n;
 }
@@ -106,3 +118,25 @@ void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
     }
     return;
 }
+
+template <uint D, typename V>
+void PiTree<D,V>::printTree() {
+    printSubTree(root, 0);
+}
+
+template <uint D, typename V>
+void PiTree<D,V>::printSubTree(node * n, uint depth) {
+    cout << string((int)depth * 2, ' ') << "- ";
+    cout << "start=" << n->start << " end=" << n->end;
+    cout << " proj=[";
+    for(uint i = 0; i < D-1; i++) {
+        cout << n->proj[i] << ",";
+    }
+    cout << n->proj[D-1] << "] ";
+    cout << "regressor=(" << n->model.slope << "x + " << n->model.bias << ")";
+    cout << endl;
+    for(uint i = 0; i < n->children.size(); i++) {
+        printSubTree(n->children[i], depth+1);
+    }
+}
+
