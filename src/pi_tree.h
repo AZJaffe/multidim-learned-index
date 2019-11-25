@@ -4,8 +4,10 @@
 #define MAX_FANOUT 10
 
 using namespace std;
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <numeric>
@@ -31,19 +33,25 @@ class PiTree {
         int start; 
         int end;
         node() : model(LinearModel(0,0)) {}
+        double project(array<double, D> key) {
+            return dotProduct<D>(key, proj);
+        }
     };
     node * root;
 
     node * buildSubTree(uint start, uint end, uint depth);
     void pairSort(uint start, uint end, const array<double, D> &proj);
     void printSubTree(node * n, uint depth);
-    double dotProduct(const array<double, D> &v, const array<double, D> &w) {
-        return inner_product(v.begin(), v.end(), w.begin(), 0);
-    }
+    datum * lookup(array<double, D> query, node * n);
 
 public:
     PiTree(vector<datum> &data, uint fanout, uint pageSize);
-    void printTree();
+    datum * lookup(array<double, D> query) {
+        return lookup(query, root);
+    }
+    void printTree() {
+        printSubTree(root, 0);
+    }
 };
 
 template <uint D, typename V>
@@ -66,7 +74,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     LinearCdfRegressor builder = LinearCdfRegressor();
     for (size_t i = 0; i < data.size(); i++) {
         builder.add(
-            dotProduct(data[i].first, n->proj)
+            n->project(data[i].first)
         );
     }
     n->model = builder.fit();
@@ -77,7 +85,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         double maxValIncrement = 1 / (double)fanout;
         for(uint i = start; i < end; i++) {
             double p = n->model.predict(
-                dotProduct(data[i].first, n->proj)
+                n->project(data[i].first)
             );
             while (p >= childMaxVal) {
                 n->children.push_back(
@@ -101,6 +109,68 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     return n;
 }
 
+template <uint D, typename V>
+typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
+    double projQuery = n->project(query);
+    double prediction = n->model.predict(projQuery));
+    if(n->isLeaf) {
+        // Leaf search is a little complicated.
+        // A complication is that even if n->project(data[i].first) == projQuery
+        // it doesn't mean that query == data[i].first. 
+        // Once leaf search finds such an i, resort to using equality across all dimensions to verify a match in a segment around i.
+
+        // Leaf search is a 4 step process:
+        // 1. Find leftBound in [start, end] such that n->project(data[leftBound].first) < projQuery
+        // 2. Find rightBound in [start, end] such that n->project(data[rightBound].first) > projQuery
+        // 3. Do binary search to find an index i such that n->project(data[i].first) == projQuery
+        // 4. Do local search around i to see if any values in the dataset are strictly equal to query.
+        uint p = clamp(
+            floor(prediction * (n->end - n->start)),
+            n->start, n->end
+        );
+        int c = compare(n->project(data[p].first), projQuery);
+        int rightBound = p;
+        int leftBound = p;
+        if (c == 0) {
+            return localSearch(p, n->start, n->end);
+        } else if (c < 0) {
+            // exponential search to the left
+            int gap = 1;
+            while(c < 0 && leftBound >= n->start) {
+                leftBound -= gap;
+                gap *= 2;
+                c = compare(n->project(data[leftBound].first), projQuery);
+            }
+            if (leftBound < n->start) {
+                leftBound = n->start;
+                c = compare(n->project(data[leftBound].first), projQuery);
+            }
+            if(c == 0) {
+                return localSearch(leftBound, n->start, n->end);
+            } else if (c < 0) {
+                return nullptr;
+            }
+        } else {
+            // exponential search to the right
+            int gap = 1;
+            while(c > 0 && rightBound <= n->end) {
+                rightBound += gap;
+                gap *= 2;
+                c = compare(n->project(data[rightBound].first), projQuery);
+            }
+            if (rightBound > n->end) {
+                rightBound = n->end;
+                c = compare(n->project(data[rightBound].first, projQuery));
+            }
+            if(c == 0) {
+                return localSearch(rightBound, n->start, n->end);
+            } else if (c > 0) {
+                return nullptr;
+            }
+        }
+    }
+}
+
 // sorts the vector of data between indices start and end according
 // to the ordering induced by the linear functional proj
 template <uint D, typename V>
@@ -113,16 +183,11 @@ void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
             data[i+start]
         ));
     }
-    std::sort(paired.begin(), paired.end());
+    sort(paired.begin(), paired.end());
     for(int i = 0; i < length; i++) {
         data[i+start] = paired[i].second;
     }
     return;
-}
-
-template <uint D, typename V>
-void PiTree<D,V>::printTree() {
-    printSubTree(root, 0);
 }
 
 template <uint D, typename V>
@@ -139,5 +204,21 @@ void PiTree<D,V>::printSubTree(node * n, uint depth) {
     for(uint i = 0; i < n->children.size(); i++) {
         printSubTree(n->children[i], depth+1);
     }
+}
+
+int compare(double a, double b) {
+    if (abs(a - b) < numeric_limits<double>::epsilon()) {
+        return 0;
+    }
+    return a < b ? -1 : 1;
+}
+
+double clamp(uint v, uint lb, uint ub) {
+    return max(lb, min(ub, v));
+}
+
+template <uint D>
+double dotProduct(const array<double, D> &v, const array<double, D> &w) {
+        return inner_product(v.begin(), v.end(), w.begin(), 0);
 }
 
