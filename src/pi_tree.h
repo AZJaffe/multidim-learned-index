@@ -70,23 +70,24 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         );
     }
     n->model = builder.fit();
-    n->isLeaf = (start - end < pageSize);
+    n->isLeaf = (end - start < pageSize);
     if (!n->isLeaf) {
-        uint childNum = 0;
         uint childStart = 0;
-        double childMaxVal = 1 / fanout;
+        double childMaxVal = 0;
+        double maxValIncrement = 1 / (double)fanout;
         for(uint i = start; i < end; i++) {
-            double p = dotProduct(data[i].first, n->proj);
+            double p = n->model.predict(
+                dotProduct(data[i].first, n->proj)
+            );
             while (p >= childMaxVal) {
                 n->children.push_back(
                     buildSubTree(childStart, i, depth+1)
                 );
-                childNum++;
                 childStart = i;
-                if (childNum == fanout - 1) {
+                if (n->children.size() == fanout) {
                     childMaxVal = numeric_limits<double>::max();
                 } else {
-                    childMaxVal = (childNum + 1) / fanout;
+                    childMaxVal += maxValIncrement;
                 }
             }
         }
@@ -104,7 +105,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
 // to the ordering induced by the linear functional proj
 template <uint D, typename V>
 void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
-    int length = end - start + 1;
+    int length = end - start;
     vector<pair<int, datum>> paired; // TODO do this without copying
     for(int i = 0; i < length; i++) {
         paired.push_back(make_pair(

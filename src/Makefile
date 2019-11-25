@@ -1,5 +1,5 @@
 CXX      := -g++
-CXXFLAGS := -std=c++17 -pedantic-errors -Wall -Wextra -Werror
+CXXFLAGS := -g -std=c++17 -pedantic-errors -Wall -Wextra -Werror -O0
 BUILD_DIR := ./build
 TEST_DIR := $(BUILD_DIR)/test
 

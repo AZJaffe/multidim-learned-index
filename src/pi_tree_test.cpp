@@ -36,12 +36,12 @@ void testPairSort(bool debug) {
         cout << endl;
         t->printTree();
     }
-    assert(data[0].second == 0);
-    assert(data[1].second == 2);
-    assert(data[2].second == 1);
-    assert(data[3].second == 5);
-    assert(data[4].second == 6);
-    assert(data[5].second == 4);
+    assert(data[0].second == 2);
+    assert(data[1].second == 1);
+    assert(data[2].second == 5);
+    assert(data[3].second == 6);
+    assert(data[4].second == 4);
+    assert(data[5].second == 3);
     assert(data.size() == 6);
 }
 
