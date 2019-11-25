@@ -133,8 +133,10 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
         int leftBound = p;
         if (c == 0) {
             return localSearch(p, n->start, n->end);
-        } else if (c < 0) {
-            // exponential search to the left
+        } else if (c > 0) {
+            // In this case, n->project(data[p].first) > projQuery, and so p is a rightBound
+            // Now we have to find leftBound.
+            // To do that, exponential search to the left.
             int gap = 1;
             while(c < 0 && leftBound >= n->start) {
                 leftBound -= gap;
@@ -151,7 +153,9 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
                 return nullptr;
             }
         } else {
-            // exponential search to the right
+            // In this case, n->project(data[p].first) < projQuery, and so p is a leftBound
+            // Now we have to find a rightBound.
+            // To do that, exponential search to the right.
             int gap = 1;
             while(c > 0 && rightBound <= n->end) {
                 rightBound += gap;
