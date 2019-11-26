@@ -43,6 +43,7 @@ class PiTree {
     void pairSort(uint start, uint end, const array<double, D> &proj);
     void printSubTree(node * n, uint depth);
     datum * lookup(array<double, D> query, node * n);
+    datum * searchLeaf(array<double, D> query, node * n);
 
 public:
     PiTree(vector<datum> &data, uint fanout, uint pageSize);
@@ -111,60 +112,78 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
 
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
+    if(n->isLeaf) {
+        return searchLeaf(query, n);   
+    }
     double projQuery = n->project(query);
     double prediction = n->model.predict(projQuery));
-    if(n->isLeaf) {
-        // Leaf search is a little complicated.
-        // A complication is that even if n->project(data[i].first) == projQuery
-        // it doesn't mean that query == data[i].first. 
-        // Once leaf search finds such an i, resort to using equality across all dimensions to verify a match in a segment around i.
+    uint childIndex = clamp(
+        floor(prediction * n->children.size()),
+        0, n->chidren.size() -1
+    );
+    return lookup(query, n->children[childIndex]);
+}
 
-        // Leaf search is a 4 step process:
-        // 1. Find leftBound in [start, end] such that n->project(data[leftBound].first) < projQuery
-        // 2. Find rightBound in [start, end] such that n->project(data[rightBound].first) > projQuery
-        // 3. Do binary search to find an index i such that n->project(data[i].first) == projQuery
-        // 4. Do local search around i to see if any values in the dataset are strictly equal to query.
-        uint p = clamp(
-            floor(prediction * (n->end - n->start)),
-            n->start, n->end
-        );
-        int c = compare(n->project(data[p].first), projQuery);
-        int rightBound = p;
-        int leftBound = p;
+
+// Leaf search is a little complicated.
+// Part of the complexity arises from the fact that even if n->project(data[i].first) == projQuery
+// it doesn't mean that query == data[i].first. 
+// Once leaf search finds such an i, call localSearch which will use equality across all dimensions to verify a match in a segment around i.
+
+// Leaf search is a 4 step process:
+// 1. Find leftBound in [start, end] such that n->project(data[leftBound].first) < projQuery, using exponential search
+// 2. Find rightBound in [start, end] such that n->project(data[rightBound].first) > projQuery, using exponential search
+// 3. Do binary search to find an index i such that n->project(data[i].first) == projQuery
+// 4. Do local search around i to see if any values in the dataset are strictly equal to query.
+
+// Either step 1 or 2 will run, not both.
+// If an index i such that n->project(data[i].first) == projQuery is found, then immediately do local search
+template <uint D, typename V>
+typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, node * n) {
+    assert(n->isLeaf);
+    double projQuery = n->project(query);
+    double prediction = n->model.predict(projQuery));
+    uint p = clamp(
+        floor(prediction * (n->end - n->start)),
+        n->start, n->end
+    );
+    int c = compare(n->project(data[p].first), projQuery);
+    int rightBound = p;
+    int leftBound = p;
+    if (c == 0) {
+        return localSearch(p, n->start, n->end);
+    } else if (c > 0) {
+        // In this case, n->project(data[p].first) > projQuery, and so p is a rightBound
+        // Now we have to find leftBound.
+        // To do that, exponential search to the left.
+        int gap = 1;
+        while (c < 0 && leftBound >= n->start) {
+            leftBound = max(leftBound - gap, n->start);
+            gap *= 2;
+            c = compare(n->project(data[leftBound].first), projQuery);
+        }
         if (c == 0) {
-            return localSearch(p, n->start, n->end);
-        } else if (c > 0) {
-            // In this case, n->project(data[p].first) > projQuery, and so p is a rightBound
-            // Now we have to find leftBound.
-            // To do that, exponential search to the left.
-            int gap = 1;
-            while (c < 0 && leftBound >= n->start) {
-                leftBound = max(leftBound - gap, n->start);
-                gap *= 2;
-                c = compare(n->project(data[leftBound].first), projQuery);
-            }
-            if (c == 0) {
-                return localSearch(leftBound, n->start, n->end);
-            } else if (c < 0) { // -> leftBound = n->start
-                return nullptr;
-            }
-        } else {
-            // In this case, n->project(data[p].first) < projQuery, and so p is a leftBound
-            // Now we have to find a rightBound.
-            // To do that, exponential search to the right.
-            int gap = 1;
-            while(c > 0 && rightBound < n->end) {
-                rightBound = min(rightBound + gap, n->end - 1);
-                gap *= 2;
-                c = compare(n->project(data[rightBound].first), projQuery);
-            }
-            if(c == 0) {
-                return localSearch(rightBound, n->start, n->end);
-            } else if (c > 0) { // -> rightBound = n->end - 1
-                return nullptr;
-            }
+            return localSearch(leftBound, n->start, n->end);
+        } else if (c < 0) { // => leftBound = n->start
+            return nullptr;
+        }
+    } else {
+        // In this case, n->project(data[p].first) < projQuery, and so p is a leftBound
+        // Now we have to find a rightBound.
+        // To do that, exponential search to the right.
+        int gap = 1;
+        while(c > 0 && rightBound < n->end) {
+            rightBound = min(rightBound + gap, n->end - 1);
+            gap *= 2;
+            c = compare(n->project(data[rightBound].first), projQuery);
+        }
+        if(c == 0) {
+            return localSearch(rightBound, n->start, n->end);
+        } else if (c > 0) { // => rightBound = n->end - 1
+            return nullptr;
         }
     }
+
 }
 
 // sorts the vector of data between indices start and end according
@@ -209,7 +228,7 @@ int compare(double a, double b) {
     return a < b ? -1 : 1;
 }
 
-double clamp(uint v, uint lb, uint ub) {
+uint clamp(uint v, uint lb, uint ub) {
     return max(lb, min(ub, v));
 }
 
