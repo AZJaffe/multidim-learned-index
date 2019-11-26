@@ -183,7 +183,11 @@ typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, no
             return nullptr;
         }
     }
-
+    // Time for binary search in the open interval (leftBound, rightBound)
+    uint step = (rightBound - leftBound) / 2; // ???? maybe off by 1
+    while(step > 0) {
+        // TODO
+    }
 }
 
 // sorts the vector of data between indices start and end according
