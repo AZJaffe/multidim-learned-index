@@ -138,18 +138,14 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
             // Now we have to find leftBound.
             // To do that, exponential search to the left.
             int gap = 1;
-            while(c < 0 && leftBound >= n->start) {
-                leftBound -= gap;
+            while (c < 0 && leftBound >= n->start) {
+                leftBound = max(leftBound - gap, n->start);
                 gap *= 2;
                 c = compare(n->project(data[leftBound].first), projQuery);
             }
-            if (leftBound < n->start) {
-                leftBound = n->start;
-                c = compare(n->project(data[leftBound].first), projQuery);
-            }
-            if(c == 0) {
+            if (c == 0) {
                 return localSearch(leftBound, n->start, n->end);
-            } else if (c < 0) {
+            } else if (c < 0) { // -> leftBound = n->start
                 return nullptr;
             }
         } else {
@@ -157,18 +153,14 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
             // Now we have to find a rightBound.
             // To do that, exponential search to the right.
             int gap = 1;
-            while(c > 0 && rightBound <= n->end) {
-                rightBound += gap;
+            while(c > 0 && rightBound < n->end) {
+                rightBound = min(rightBound + gap, n->end - 1);
                 gap *= 2;
                 c = compare(n->project(data[rightBound].first), projQuery);
             }
-            if (rightBound > n->end) {
-                rightBound = n->end;
-                c = compare(n->project(data[rightBound].first, projQuery));
-            }
             if(c == 0) {
                 return localSearch(rightBound, n->start, n->end);
-            } else if (c > 0) {
+            } else if (c > 0) { // -> rightBound = n->end - 1
                 return nullptr;
             }
         }
