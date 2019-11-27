@@ -86,8 +86,8 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     n->isLeaf = (end - start < pageSize);
     if (!n->isLeaf) {
         uint childStart = 0;
-        double childMaxVal = 0;
-        double maxValIncrement = 1 / (double)fanout;
+        double childMaxVal = 1.0 / (double)fanout;
+        double maxValIncrement = childMaxVal;
         for(uint i = start; i < end; i++) {
             double p = n->model.predict(
                 n->project(data[i])
@@ -97,7 +97,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
                     buildSubTree(childStart, i, depth+1)
                 );
                 childStart = i;
-                if (n->children.size() == fanout) {
+                if (n->children.size() == fanout-1) {
                     childMaxVal = numeric_limits<double>::max();
                 } else {
                     childMaxVal += maxValIncrement;
@@ -106,8 +106,9 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         }
         while(n->children.size() < fanout) {
             n->children.push_back(
-                buildSubTree(end, end, depth+1)
+                buildSubTree(childStart, end-1, depth+1)
             );
+            childStart = end-1;
         }
         assert(n->children.size() == fanout);
     }
