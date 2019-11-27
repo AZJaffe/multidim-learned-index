@@ -15,6 +15,11 @@ using namespace std;
 #include <vector>
 #include "linear_cdf_regressor.h"
 
+template <uint D>
+double dotProduct(const array<double, D> &v, const array<double, D> &w) {
+    return inner_product(v.begin(), v.end(), w.begin(), 0);
+}
+
 // D is the dimension of the key of the data, V is the type of the data values
 template <uint D, typename V>
 class PiTree {
@@ -33,14 +38,14 @@ class PiTree {
         int start; 
         int end;
         node() : model(LinearModel(0,0)) {}
-        double project(array<double, D> key) {
-            return dotProduct<D>(key, proj);
+        double project(datum d) {
+            return dotProduct<D>(d.first, proj);
         }
     };
     node * root;
 
     node * buildSubTree(uint start, uint end, uint depth);
-    void pairSort(uint start, uint end, const array<double, D> &proj);
+    void pairSort(node * n);
     void printSubTree(node * n, uint depth);
     datum * lookup(array<double, D> query, node * n);
 
@@ -70,11 +75,11 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     for(uint i = 0; i < D; i++) {
         n->proj[i] = (i == depth % D) ? 1 : 0;
     }
-    pairSort(start, end, n->proj);
+    pairSort(n);
     LinearCdfRegressor builder = LinearCdfRegressor();
     for (size_t i = 0; i < data.size(); i++) {
         builder.add(
-            n->project(data[i].first)
+            n->project(data[i])
         );
     }
     n->model = builder.fit();
@@ -85,7 +90,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         double maxValIncrement = 1 / (double)fanout;
         for(uint i = start; i < end; i++) {
             double p = n->model.predict(
-                n->project(data[i].first)
+                n->project(data[i])
             );
             while (p >= childMaxVal) {
                 n->children.push_back(
@@ -111,85 +116,86 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
 
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
-    double projQuery = n->project(query);
-    double prediction = n->model.predict(projQuery));
-    if(n->isLeaf) {
-        // Leaf search is a little complicated.
-        // A complication is that even if n->project(data[i].first) == projQuery
-        // it doesn't mean that query == data[i].first. 
-        // Once leaf search finds such an i, resort to using equality across all dimensions to verify a match in a segment around i.
+    return nullptr;
+    // double projQuery = n->project(query);
+    // double prediction = n->model.predict(projQuery));
+    // if(n->isLeaf) {
+    //     // Leaf search is a little complicated.
+    //     // A complication is that even if n->project(data[i].first) == projQuery
+    //     // it doesn't mean that query == data[i].first. 
+    //     // Once leaf search finds such an i, resort to using equality across all dimensions to verify a match in a segment around i.
 
-        // Leaf search is a 4 step process:
-        // 1. Find leftBound in [start, end] such that n->project(data[leftBound].first) < projQuery
-        // 2. Find rightBound in [start, end] such that n->project(data[rightBound].first) > projQuery
-        // 3. Do binary search to find an index i such that n->project(data[i].first) == projQuery
-        // 4. Do local search around i to see if any values in the dataset are strictly equal to query.
-        uint p = clamp(
-            floor(prediction * (n->end - n->start)),
-            n->start, n->end
-        );
-        int c = compare(n->project(data[p].first), projQuery);
-        int rightBound = p;
-        int leftBound = p;
-        if (c == 0) {
-            return localSearch(p, n->start, n->end);
-        } else if (c > 0) {
-            // In this case, n->project(data[p].first) > projQuery, and so p is a rightBound
-            // Now we have to find leftBound.
-            // To do that, exponential search to the left.
-            int gap = 1;
-            while(c < 0 && leftBound >= n->start) {
-                leftBound -= gap;
-                gap *= 2;
-                c = compare(n->project(data[leftBound].first), projQuery);
-            }
-            if (leftBound < n->start) {
-                leftBound = n->start;
-                c = compare(n->project(data[leftBound].first), projQuery);
-            }
-            if(c == 0) {
-                return localSearch(leftBound, n->start, n->end);
-            } else if (c < 0) {
-                return nullptr;
-            }
-        } else {
-            // In this case, n->project(data[p].first) < projQuery, and so p is a leftBound
-            // Now we have to find a rightBound.
-            // To do that, exponential search to the right.
-            int gap = 1;
-            while(c > 0 && rightBound <= n->end) {
-                rightBound += gap;
-                gap *= 2;
-                c = compare(n->project(data[rightBound].first), projQuery);
-            }
-            if (rightBound > n->end) {
-                rightBound = n->end;
-                c = compare(n->project(data[rightBound].first, projQuery));
-            }
-            if(c == 0) {
-                return localSearch(rightBound, n->start, n->end);
-            } else if (c > 0) {
-                return nullptr;
-            }
-        }
-    }
+    //     // Leaf search is a 4 step process:
+    //     // 1. Find leftBound in [start, end] such that n->project(data[leftBound].first) < projQuery
+    //     // 2. Find rightBound in [start, end] such that n->project(data[rightBound].first) > projQuery
+    //     // 3. Do binary search to find an index i such that n->project(data[i].first) == projQuery
+    //     // 4. Do local search around i to see if any values in the dataset are strictly equal to query.
+    //     uint p = clamp(
+    //         floor(prediction * (n->end - n->start)),
+    //         n->start, n->end
+    //     );
+    //     int c = compare(n->project(data[p].first), projQuery);
+    //     int rightBound = p;
+    //     int leftBound = p;
+    //     if (c == 0) {
+    //         return localSearch(p, n->start, n->end);
+    //     } else if (c > 0) {
+    //         // In this case, n->project(data[p].first) > projQuery, and so p is a rightBound
+    //         // Now we have to find leftBound.
+    //         // To do that, exponential search to the left.
+    //         int gap = 1;
+    //         while(c < 0 && leftBound >= n->start) {
+    //             leftBound -= gap;
+    //             gap *= 2;
+    //             c = compare(n->project(data[leftBound].first), projQuery);
+    //         }
+    //         if (leftBound < n->start) {
+    //             leftBound = n->start;
+    //             c = compare(n->project(data[leftBound].first), projQuery);
+    //         }
+    //         if(c == 0) {
+    //             return localSearch(leftBound, n->start, n->end);
+    //         } else if (c < 0) {
+    //             return nullptr;
+    //         }
+    //     } else {
+    //         // In this case, n->project(data[p].first) < projQuery, and so p is a leftBound
+    //         // Now we have to find a rightBound.
+    //         // To do that, exponential search to the right.
+    //         int gap = 1;
+    //         while(c > 0 && rightBound <= n->end) {
+    //             rightBound += gap;
+    //             gap *= 2;
+    //             c = compare(n->project(data[rightBound].first), projQuery);
+    //         }
+    //         if (rightBound > n->end) {
+    //             rightBound = n->end;
+    //             c = compare(n->project(data[rightBound].first, projQuery));
+    //         }
+    //         if(c == 0) {
+    //             return localSearch(rightBound, n->start, n->end);
+    //         } else if (c > 0) {
+    //             return nullptr;
+    //         }
+    //     }
+    // }
 }
 
 // sorts the vector of data between indices start and end according
 // to the ordering induced by the linear functional proj
 template <uint D, typename V>
-void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
-    int length = end - start;
-    vector<pair<int, datum>> paired; // TODO do this without copying
+void PiTree<D,V>::pairSort(node * n) {
+    int length = n->end - n->start;
+    vector<pair<double, datum>> paired; // TODO do this without copying
     for(int i = 0; i < length; i++) {
         paired.push_back(make_pair(
-            dotProduct(data[i+start].first, proj),
-            data[i+start]
+            n->project(data[i+n->start]),
+            data[i+n->start]
         ));
     }
     sort(paired.begin(), paired.end());
     for(int i = 0; i < length; i++) {
-        data[i+start] = paired[i].second;
+        data[i+n->start] = paired[i].second;
     }
     return;
 }
@@ -197,6 +203,10 @@ void PiTree<D,V>::pairSort(uint start, uint end, const array<double, D> &proj) {
 template <uint D, typename V>
 void PiTree<D,V>::printSubTree(node * n, uint depth) {
     cout << string((int)depth * 2, ' ') << "- ";
+    if(n->start == n->end) {
+        cout << "NULL" << endl;
+        return;
+    }
     cout << "start=" << n->start << " end=" << n->end;
     cout << " proj=[";
     for(uint i = 0; i < D-1; i++) {
@@ -221,8 +231,5 @@ double clamp(uint v, uint lb, uint ub) {
     return max(lb, min(ub, v));
 }
 
-template <uint D>
-double dotProduct(const array<double, D> &v, const array<double, D> &w) {
-        return inner_product(v.begin(), v.end(), w.begin(), 0);
-}
+
 
