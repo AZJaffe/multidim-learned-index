@@ -7,6 +7,7 @@ using namespace std;
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <math.h>
 
 struct LinearModel {
 public:
@@ -38,8 +39,10 @@ public:
         s_xx += d * d;
     }
     LinearModel fit() {
+        assert(n != 0);
         double s_y = (n+1) / 2;
         double slope = (s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
+        assert(!isnan(slope));
         return LinearModel(
             (s_y - slope*s_x) / n,
             slope
