@@ -20,7 +20,7 @@ void testTreeBuild() {
         int v = itd - data.begin();
         *itd = make_pair(k, v);
     }
-    PiTree<D,int> *t = new PiTree<D,int>(data, 3, 5);
+    PiTree<D,int> *t = new PiTree<D,int>(data, 3, 10);
     t->printTree();
 }
 

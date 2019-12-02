@@ -1,7 +1,12 @@
 #pragma once
 
-// 10 is arbitrary
-#define MAX_FANOUT 10
+#ifdef DEBUG_BUILD
+#  define DPRINT(x) cout << x << endl
+#  define DEBUG if(1)
+#else
+#  define DPRINT(x) do {} while (0)
+#  define DEBUG if(0)
+#endif
 
 using namespace std;
 #include <vector>
@@ -31,8 +36,11 @@ class LinearCdfRegressor {
 public:
     double s_xy, s_x, s_xx;
     double n; // number of data points seen so far
-    LinearCdfRegressor() : s_xy(0), s_x(0), s_xx(0), n(0) {}
+    double max;
+    LinearCdfRegressor() : s_xy(0), s_x(0), s_xx(0), n(0), max(0) {}
     void add(double d) {
+        assert(d >= max);
+        DEBUG max = d;
         n++;
         s_xy += d * n;
         s_x += d;
@@ -42,7 +50,9 @@ public:
         assert(n != 0);
         double s_y = (n+1) / 2;
         double slope = (s_xy - s_x*s_y) / (n*s_xx - s_x*s_x);
-        assert(!isnan(slope));
+        if(isnan(slope)) {
+            return LinearModel(s_x, 0);
+        }
         return LinearModel(
             (s_y - slope*s_x) / n,
             slope

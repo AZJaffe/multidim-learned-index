@@ -4,9 +4,11 @@
 #define MAX_FANOUT 10
 
 #ifdef DEBUG_BUILD
-#  define DEBUG(x) cout << x
+#  define DPRINT(x) cout << x << endl
+#  define DEBUG if(1)
 #else
-#  define DEBUG(x) do {} while (0)
+#  define DPRINT(x) do {} while (0)
+#  define DEBUG if(0)
 #endif
 
 using namespace std;
@@ -71,33 +73,34 @@ data(data), fanout(fanout), pageSize(pageSize) {
 
 template <uint D, typename V>
 typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) {
-    DEBUG("Building subtree with start=" << start << " end=" << end << endl);
+    DPRINT("Building subtree with start=" << start << " end=" << end);
     node * n = new node();
     n->start = start;
     n->end = end;
     for(uint i = 0; i < D; i++) {
         n->proj[i] = (i == depth % D) ? 1 : 0;
     }
+    if(end - start == 0) {
+        return n;
+    }
     pairSort(*n);
     LinearCdfRegressor builder = LinearCdfRegressor();
-    for (size_t i = 0; i < data.size(); i++) {
+    for (uint i = start; i < end; i++) {
         builder.add(
             n->project(data[i])
         );
     }
     n->model = builder.fit();
-    DEBUG("regressor=(" << n->model.slope << "x + " << n->model.bias << ")" << endl);
+    DPRINT("regressor=(" << n->model.slope << "x + " << n->model.bias << ")");
     n->isLeaf = (end - start < pageSize);
     if (!n->isLeaf) {
-        uint childStart = 0;
+        uint childStart = start;
         double childMaxVal = 1.0 / (double)fanout;
         double maxValIncrement = childMaxVal;
-        DEBUG("childMaxVal=" << childMaxVal << endl);
         for(uint i = start; i < end; i++) {
             double p = n->model.predict(
                 n->project(data[i])
             );
-            DEBUG("p=" << p << " proj=" << n->project(data[i]) << endl);
             while (p >= childMaxVal) {
                 n->children.push_back(
                     buildSubTree(childStart, i, depth+1)
@@ -108,7 +111,6 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
                 } else {
                     childMaxVal += maxValIncrement;
                 }
-                DEBUG("childMaxVal=" << childMaxVal << endl);
             }
         }
         while(n->children.size() < fanout) {
@@ -207,7 +209,7 @@ typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, no
 template <uint D, typename V>
 void PiTree<D,V>::pairSort(node & n) {
     int length = n.end - n.start;
-    vector<pair<int, datum>> paired; // TODO do this without copying
+    vector<pair<double, datum>> paired; // TODO do this without copying
     for(int i = 0; i < length; i++) {
         paired.push_back(make_pair(
             n.project(data[i+n.start]),
