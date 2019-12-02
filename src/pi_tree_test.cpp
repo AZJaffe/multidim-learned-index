@@ -56,7 +56,40 @@ void testTreeBuild() {
     data.push_back(make_pair(array<double, D>{4.0, 6.0}, 6));
 }
 
+void testTreeBuild2() {
+    const uint D = 3;
+    const uint N = 40;
+    auto data = vector<pair<array<double, D>, int>>(N);
+    for(auto itd = data.begin(); itd != data.end(); itd++) {
+        array<double, D> k;
+        for(auto it = k.begin(); it != k.end(); it++) {
+            *it = static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 10.0;
+        }
+        int v = itd - data.begin();
+        *itd = make_pair(k, v);
+    }
+    PiTree<D,int> *t = new PiTree<D,int>(data, 3, 10);
+    t->printTree();
+}
+
+void testPointQuery() {
+    const uint D = 1;
+    const uint N = 1000;
+    auto data = vector<pair<array<double, D>, int>>(N);
+    for(auto it = data.begin(); it != data.end(); it++) {
+        array<double, D> k;
+        k[0] = static_cast<double>(rand()) / static_cast<double>(RAND_MAX) * 10.0;
+        int v = it - data.begin();
+        *it = make_pair(k, v);
+    }
+    PiTree<D,int> *t = new PiTree<D,int>(data, 1, 1000); // one level tree since fanout = N
+    pair<array<double, D>, int> * d = t->lookup(data[12].first);
+    assert(d != nullptr && d->second == data[12].second);
+}
+
 int main(void) {
-    testPairSort(true);
-    testTreeBuild();
+    // testPairSort(true);
+    // testTreeBuild();
+    // testTreeBuild2();
+    testPointQuery();
 }
