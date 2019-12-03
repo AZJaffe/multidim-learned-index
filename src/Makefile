@@ -1,18 +1,20 @@
 CXX      := -g++
-CXXFLAGS := -std=c++17 -pedantic-errors -Wall -Wextra -Werror -O0
+CXXFLAGS := --std=c++17 -pedantic-errors -Wall -Wextra -Werror -O0
 BUILD_DIR := ./build
 TEST_DIR := $(BUILD_DIR)/test
 
 TESTS := $(wildcard *_test.cpp)
 SRCS := $(filter-out $(TESTS),$(wildcard *.h))
 
-debug: CXXFLAGS += -g -DDEBUG_BUILD
-debug: tests
+ifeq ($(DEBUG), 1)
+	CXXFLAGS += -g -DDEBUG
+else
+	CXXFLAGS += -DNDEBUG
+endif
 
 .PHONY: tests
 tests: build $(TESTS:%.cpp=$(TEST_DIR)/%.out)
 
-tests: build
 $(TEST_DIR)/%_test.out: %_test.cpp $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
