@@ -1,8 +1,5 @@
 #pragma once
 
-// 10 is arbitrary
-#define MAX_FANOUT 10
-
 #ifdef DEBUG_BUILD
 #  define DPRINT(x) cout << x << endl
 #  define DEBUG if(1)
@@ -52,6 +49,16 @@ class PiTree {
         double project(array<double, D> &d) {
             return inner_product(d.begin(), d.end(), proj.begin(), 0.0);
         };
+        int getChildIndex(double d) {
+            assert(!isLeaf);
+            int prediction = floor(model.predict(d) * children.size());
+            return max(0, min(prediction, (int)children.size()));
+        };
+        int getIndex(double d) {
+            assert(isLeaf);
+            int prediction = floor(model.predict(d) * (end - start));
+            return max(start, min(prediction, end));
+        };
     };
     node * root;
 
@@ -61,11 +68,19 @@ class PiTree {
     datum * lookup(array<double, D> query, node * n);
     datum * searchLeaf(array<double, D> query, node * n);
     datum * localSearch(array<double, D> query, double projQuery, node * n, uint start);
+    void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n);
 
 public:
     PiTree(vector<datum> &data, uint fanout, uint pageSize);
     datum * lookup(array<double, D> query) {
         return lookup(query, root);
+    }
+    vector<datum> rangeQuery(array<double, D> min, array<double, D> max) {
+        DEBUG for(int i = 0; i < D; i++) assert(min[i] <= max[i]);
+        assert(root != nullptr);
+        vector<datum> ret;
+        rangeQuery(ret, min, max, root);
+        return ret;
     }
     void printTree() {
         printSubTree(root, 0);
@@ -133,14 +148,58 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     return n;
 }
 
+template<uint D, typename V>
+void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<double, D> min, array<double, D> max, node * n) {
+    if(n->isLeaf) {
+        return rangeQueryLeaf(min, max, n);
+    }
+    double minProjection = 0; double maxProjection = 0;
+    for(int i = 0; i < D; i++) {
+        double minProduct = n->proj[i] * min[i];
+        double maxProduct = n->proj[i] * max[i];
+        if(n->proj[i] > 0) {
+            minProjection += minProduct;
+            maxProjection += maxProduct;
+        } else {
+            minProjection += maxProduct;
+            maxProjection += minProduct; 
+        }
+    }
+
+    if(n->isLeaf) {
+        int minIndex = n->getIndex(minProjection);
+        int maxIndex = n->getIndex(maxProjection);
+        for(uint i = minIndex; i <= maxIndex; i++) {
+            bool withinBounds = true;
+            for(uint d = 0; d < D; d++) {
+                if (data[i].first[d] < min[d] || data[i].first[d] > max[d]) {
+                    withinBounds = false;
+                    break;
+                }
+            }
+            if (withinBounds) {
+                ret.push_back(data[i]);
+            }
+        }
+        return;
+    } else {
+        int minChildIndex = n->getChildIndex(minProjection);
+        int maxChildIndex = n->getChildIndex(maxProjection);
+
+        for(int i = minChildIndex; i <= maxChildIndex; i++) {
+            rangeQuery(ret, min, max, n->children[i]);
+        }
+        return;
+    }
+}
+
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
     if(n->isLeaf) {
         return searchLeaf(query, n);   
     }
     double projQuery = n->project(query);
-    int prediction = floor(n->model.predict(projQuery) * (n->children.size()));
-    int childIndex = max(0, min(prediction, (int)n->children.size()));
+    int childIndex = n->getChildIndex(projQuery);
     return lookup(query, n->children[childIndex]);
 }
 
@@ -162,7 +221,7 @@ typename PiTree<D,V>::datum * PiTree<D,V>::localSearch(array<double, D> query, d
     }
     l = start;
     while(l >= n->start && compare(projQuery, n->project(data[l].first) == 0)) {
-                bool equal = true;
+        bool equal = true;
         for(uint i = 0; i < D; i++) {
             if (compare(query[i], data[l].first[i]) != 0) {
                 equal = false;
@@ -195,7 +254,7 @@ template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, node * n) {
     assert(n->isLeaf);
     double projQuery = n->project(query);
-    int prediction = floor(n->model.predict(projQuery) * (n->end - n->start));
+    int prediction = getIndex(projQuery);
     int p = max(n->start, min(prediction, n->end));
     int c = compare(n->project(data[p].first), projQuery);
     int rightBound = p;
