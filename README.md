@@ -2,9 +2,9 @@
 
 ## TODO
 1.  Lookups (Adam)
-    1.  Point
+    1.  ✔ Point
     2.  Range
-2.  Building Tree (Adam)
+2.  ✔ Building Tree (Adam)
 3.  Fanout model
 4.  Page size
 5.  PCA Projection
