@@ -8,10 +8,11 @@
 3.  Fanout model
 4.  Page size
 5.  PCA Projection
-6.  Competitors (Xiyang)
+6.  Support partial range queries
+7.  Competitors (Xiyang)
     1.  R-Tree
     2.  KD-Tree
     3.  Full Scan
-7.  Datasets (Xiyang)
+8.  Datasets (Xiyang)
     1.  Synthetic data
     2.  Real world data
