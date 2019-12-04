@@ -132,7 +132,7 @@ void testRangeQuery() {
     data.push_back(make_pair(array<double, D>{2.1, 0.8}, 12));
 
     auto *t = new PiTree<D, int>(data, 2, 5);
-    t->printTree();
+    t->printTree(true);
     vector<pair<array<double, D>, int>> ret = t->rangeQuery(min, max);
     sort(ret.begin(), ret.end(), [](const pair<array<double, D>, int> &a, const pair<array<double, D>, int> &b) { return a.second < b.second; });
     assert(ret.size() == 13);

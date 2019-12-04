@@ -1,11 +1,11 @@
 #pragma once
 
-#ifdef DEBUG
-#  define DPRINT(x) cout << x << endl
-#  define IFDEBUG if(1)
+#ifdef TRACE
+#  define TPRINT(x) cout << x << endl
+#  define IFTRACE if(1)
 #else
-#  define DPRINT(x) do {} while (0)
-#  define IFDEBUG if(0)
+#  define TPRINT(x) do {} while (0)
+#  define IFTRACE if(0)
 #endif
 
 using namespace std;
@@ -40,7 +40,7 @@ public:
     LinearCdfRegressor() : s_xy(0), s_x(0), s_xx(0), n(0), max(0) {}
     void add(double d) {
         assert(d >= max);
-        IFDEBUG max = d;
+        IFTRACE max = d;
         n++;
         s_xy += d * n;
         s_x += d;

@@ -1,11 +1,11 @@
 #pragma once
 
-#ifdef DEBUG
-#  define DPRINT(x) cout << x << endl
-#  define IFDEBUG if(1)
+#ifdef TRACE
+#  define TPRINT(x) cout << x << endl
+#  define IFTRACE if(1)
 #else
-#  define DPRINT(x) do {} while (0)
-#  define IFDEBUG if(0)
+#  define TPRINT(x) do {} while (0)
+#  define IFTRACE if(0)
 #endif
 
 using namespace std;
@@ -56,7 +56,7 @@ class PiTree {
         };
         int getIndex(double d) {
             assert(isLeaf);
-            int prediction = floor(model.predict(d) * (end - start));
+            int prediction = floor(model.predict(d) * (end - start)) + start;
             return max(start, min(prediction, end - 1));
         };
     };
@@ -64,7 +64,7 @@ class PiTree {
 
     node * buildSubTree(uint start, uint end, uint depth);
     void pairSort(node & n);
-    void printSubTree(node * n, uint depth);
+    void printSubTree(node * n, uint depth, bool printData = false);
     datum * lookup(array<double, D> query, node * n);
     datum * searchLeaf(array<double, D> query, node * n);
     datum * localSearch(array<double, D> query, double projQuery, node * n, uint start);
@@ -76,14 +76,14 @@ public:
         return lookup(query, root);
     }
     vector<datum> rangeQuery(array<double, D> min, array<double, D> max) {
-        IFDEBUG for(uint i = 0; i < D; i++) assert(min[i] <= max[i]);
+        IFTRACE for(uint i = 0; i < D; i++) assert(min[i] <= max[i]);
         assert(root != nullptr);
         vector<datum> ret;
         rangeQuery(ret, min, max, root);
         return ret;
     }
-    void printTree() {
-        printSubTree(root, 0);
+    void printTree(bool printData = false) {
+        printSubTree(root, 0, printData);
     }
 };
 
@@ -97,7 +97,7 @@ data(data), fanout(fanout), pageSize(pageSize) {
 
 template <uint D, typename V>
 typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) {
-    DPRINT("Building subtree with start=" << start << " end=" << end);
+    TPRINT("Building subtree with start=" << start << " end=" << end);
     node * n = new node();
     n->start = start;
     n->end = end;
@@ -115,7 +115,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         );
     }
     n->model = builder.fit();
-    DPRINT("regressor=(" << n->model.slope << "x + " << n->model.bias << ")");
+    TPRINT("regressor=(" << n->model.slope << "x + " << n->model.bias << ")");
     n->isLeaf = (end - start < pageSize);
     if (!n->isLeaf) {
         uint childStart = start;
@@ -166,6 +166,7 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
     if(n->isLeaf) {
         int minIndex = n->getIndex(minProjection);
         int maxIndex = n->getIndex(maxProjection);
+        TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << minIndex << ", " << maxIndex << "]");
         for(int i = minIndex; i <= maxIndex; i++) {
             bool withinBounds = true;
             for(uint d = 0; d < D; d++) {
@@ -317,22 +318,33 @@ void PiTree<D,V>::pairSort(node & n) {
 }
 
 template <uint D, typename V>
-void PiTree<D,V>::printSubTree(node * n, uint depth) {
+void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
     cout << string((int)depth * 2, ' ') << "- ";
     if(n->start == n->end) {
         cout << "NULL" << endl;
         return;
     }
-    cout << "start=" << n->start << " end=" << n->end;
-    cout << " proj=[";
+    cout << "range=[" << n->start << ", " << n->end << ") ";
+    cout << "proj=[";
     for(uint i = 0; i < D-1; i++) {
         cout << n->proj[i] << ",";
     }
     cout << n->proj[D-1] << "] ";
-    cout << "regressor=(" << n->model.slope << "x + " << n->model.bias << ")";
+    cout << "regressor=(" << n->model.slope << "x + " << n->model.bias << ") ";
+    cout << "isLeaf=" << n->isLeaf;
     cout << endl;
+    if(n->isLeaf && printData) {
+        for(int i = n->start; i < n->end; i++) {
+            cout << string((int)depth * 2 + 2, ' ') << "- {[";
+            for(uint d = 0; d < D-1; d++) {
+                cout << data[i].first[d] << ", ";
+            }
+            cout << data[i].first[D-1] << "], ";
+            cout << data[i].second << "}" << endl;
+        }
+    }
     for(uint i = 0; i < n->children.size(); i++) {
-        printSubTree(n->children[i], depth+1);
+        printSubTree(n->children[i], depth+1, printData);
     }
 }
 
