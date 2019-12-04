@@ -19,6 +19,7 @@ using namespace std;
 #include <string>
 #include <vector>
 #include "linear_cdf_regressor.h"
+#include "exponential_search.h"
 
 // TODO? make a better double comparison
 int compare(double a, double b) {
@@ -164,8 +165,15 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
     }
 
     if(n->isLeaf) {
-        int minIndex = n->getIndex(minProjection);
-        int maxIndex = n->getIndex(maxProjection);
+        int predictedMinIndex = n->getIndex(minProjection);
+        int predictedMaxIndex = n->getIndex(maxProjection);
+        // The predicted indices could be off. Have to do exponential search to find the actual minIndex,maxIndex to search
+        int minIndex = predictedMinIndex;
+        int maxIndex = predictedMaxIndex;
+
+        // while()
+
+
         TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << minIndex << ", " << maxIndex << "]");
         for(int i = minIndex; i <= maxIndex; i++) {
             bool withinBounds = true;
@@ -254,46 +262,8 @@ typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, no
     double projQuery = n->project(query);
     int prediction = n->getIndex(projQuery);
     int p = max(n->start, min(prediction, n->end));
-    int c = compare(n->project(data[p].first), projQuery);
-    int rightBound = p;
-    int leftBound = p;
-    if (c == 0) {
-        return localSearch(query, projQuery, n, p);
-    } else if (c > 0) {
-        // In this case, n->project(data[p]) > projQuery, and so p is a rightBound
-        // Now we have to find leftBound.
-        // To do that, exponential search to the left.
-        int gap = 1;
-        while (c > 0 && leftBound > n->start) {
-            rightBound = leftBound;
-            leftBound = max(leftBound - gap, n->start);
-            gap *= 2;
-            c = compare(n->project(data[leftBound].first), projQuery);
-        }
-        if (c == 0) {
-            return localSearch(query, projQuery, n, leftBound);
-        } else if (c > 0) { // => leftBound = n->start
-            return nullptr;
-        }
-    } else {
-        // In this case, n->project(data[p]) < projQuery, and so p is a leftBound
-        // Now we have to find a rightBound.
-        // To do that, exponential search to the right.
-        int gap = 1;
-        while(c < 0 && rightBound < n->end - 1) {
-            leftBound = rightBound;
-            rightBound = min(rightBound + gap, n->end - 1);
-            gap *= 2;
-            c = compare(n->project(data[rightBound].first), projQuery);
-        }
-        if(c == 0) {
-            return localSearch(query, projQuery, n, rightBound);
-        } else if (c < 0) { // => rightBound = n->end - 1
-            return nullptr;
-        }
-    }
-    auto it = lower_bound(data.begin() + leftBound, data.begin() + rightBound, projQuery,
-        [n](datum &d, double p) { return compare(n->project(d.first), p) < 0; } );
+    auto it = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + p, projQuery, 
+        [n](datum &d, double p) { return n->project(d.first) < p; });
     uint index = distance(data.begin(), it);
     return localSearch(query, projQuery, n, index);
 }
