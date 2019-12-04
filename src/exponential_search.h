@@ -2,6 +2,9 @@
 
 using namespace std;
 
+// The 3rd parameter for both functions is a "hint" about where to start. The answer will be the same no matter what the hint is
+
+
 // comp(e,v)  iff e <  v
 // !comp(e,v) iff e >= v 
 // returns iterator to the least element e such that comp(e,v) is false
@@ -82,7 +85,7 @@ RandomAccessIterator exponentialSearchUpperBound(RandomAccessIterator first, Ran
     } else {
         // v >= e, so exponential search to the right
         int gap = 1;
-        while (c) {
+        while (!c) {
             lowerBound = e + 1;
             e += gap;
             if (e >= upperBound) {
