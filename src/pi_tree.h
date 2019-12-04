@@ -166,23 +166,26 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         int predictedMinIndex = n->getIndex(minProjection);
         int predictedMaxIndex = n->getIndex(maxProjection);
         // The predicted indices could be off. Have to do exponential search to find the actual minIndex,maxIndex to search
-        int minIndex = predictedMinIndex;
-        int maxIndex = predictedMaxIndex;
 
-        // while()
+        // 2 ways of doing this
+        // first is the get lower bound then iterate and check every stage
+        // second is to get lower and upper bound, then iterate between (without checking)
+        auto start = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedMinIndex, minProjection,
+            [n](datum &d, double p) { return n->project(d.first) < p; });
+        auto end = exponentialSearchUpperBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedMaxIndex, maxProjection,
+            [n](double p, datum &d) { return p < n->project(d.first); });
 
-
-        TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << minIndex << ", " << maxIndex << "]");
-        for(int i = minIndex; i <= maxIndex; i++) {
+        TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << start - data.begin() << ", " << end - data.begin() << ")");
+        for(auto it = start; it < end; it++) {
             bool withinBounds = true;
             for(uint d = 0; d < D; d++) {
-                if (data[i].first[d] < min[d] || data[i].first[d] > max[d]) {
+                if (it->first[d] < min[d] || it->first[d] > max[d]) {
                     withinBounds = false;
                     break;
                 }
             }
             if (withinBounds) {
-                ret.push_back(data[i]);
+                ret.push_back(*it);
             }
         }
         return;
@@ -223,18 +226,6 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
     double projQuery = n->project(query);
     int childIndex = n->getChildIndex(projQuery);
     return lookup(query, n->children[childIndex]);
-}
-
-template <uint D, typename V>
-typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, node * n) {
-    assert(n->isLeaf);
-    double projQuery = n->project(query);
-    int prediction = n->getIndex(projQuery);
-    int p = max(n->start, min(prediction, n->end));
-    auto it = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + p, projQuery, 
-        [n](datum &d, double p) { return n->project(d.first) < p; });
-    uint index = distance(data.begin(), it);
-    return localSearch(query, projQuery, n, index);
 }
 
 // sorts the vector of data between indices start and end according

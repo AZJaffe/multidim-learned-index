@@ -8,7 +8,7 @@
 using namespace std;
 
 
-void testPairSort(bool debug) {
+void testPairSort(bool debug = false) {
     const uint D = 2;
     vector<pair<array<double, D>, int>> data;
     data.push_back(make_pair(array<double, D>{2.0, 1.0}, 1));
@@ -56,7 +56,7 @@ void testTreeBuild() {
     data.push_back(make_pair(array<double, D>{4.0, 6.0}, 6));
 }
 
-void testTreeBuild2() {
+void testTreeBuild2(bool debug = false) {
     const uint D = 3;
     const uint N = 40;
     auto data = vector<pair<array<double, D>, int>>(N);
@@ -69,7 +69,7 @@ void testTreeBuild2() {
         *itd = make_pair(k, v);
     }
     PiTree<D,int> *t = new PiTree<D,int>(data, 3, 10);
-    t->printTree();
+    if(debug) t->printTree();
 }
 
 void testPointQuery() {
@@ -88,7 +88,7 @@ void testPointQuery() {
     (void) d;
 }
 
-void testRangeQuery() {
+void testRangeQuery(bool debug = false) {
     const uint D = 2;
     auto data = vector<pair<array<double, D>, int>>();
     auto min = array<double, D>{1.0, 1.0};
@@ -132,20 +132,19 @@ void testRangeQuery() {
     data.push_back(make_pair(array<double, D>{2.1, 0.8}, 12));
 
     auto *t = new PiTree<D, int>(data, 2, 5);
-    t->printTree(true);
+    if(debug) t->printTree(true);
     vector<pair<array<double, D>, int>> ret = t->rangeQuery(min, max);
     sort(ret.begin(), ret.end(), [](const pair<array<double, D>, int> &a, const pair<array<double, D>, int> &b) { return a.second < b.second; });
     assert(ret.size() == 13);
     for(int i = 0; i < (int)ret.size(); i++) {
         assert(ret[i].second == i);
     }
-    assert(false);
 }
 
 int main(void) {
-    // testPairSort(true);
-    // testTreeBuild();
-    // testTreeBuild2();
-    // testPointQuery();
+    testPairSort();
+    testTreeBuild();
+    testTreeBuild2();
+    testPointQuery();
     testRangeQuery();
 }
