@@ -67,8 +67,6 @@ class PiTree {
     void pairSort(node & n);
     void printSubTree(node * n, uint depth, bool printData = false);
     datum * lookup(array<double, D> query, node * n);
-    datum * searchLeaf(array<double, D> query, node * n);
-    datum * localSearch(array<double, D> query, double projQuery, node * n, uint start);
     void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n);
 
 public:
@@ -202,60 +200,31 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
     if(n->isLeaf) {
-        return searchLeaf(query, n);   
+        double projQuery = n->project(query);
+        int prediction = n->getIndex(projQuery);
+        int p = max(n->start, min(prediction, n->end));
+        auto it = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + p, projQuery, 
+            [n](datum &d, double p) { return n->project(d.first) < p; });
+        while(it < data.begin() + n->end && projQuery >= n->project(it->first)) {
+            bool equal = true;
+            for(uint i = 0; i < D; i++) {
+                if (compare(query[i], it->first[i]) != 0) {
+                    equal = false;
+                    break;
+                }
+            }
+            if (equal) {
+                return &(*it);
+            }
+            it++;
+        }
+        return nullptr;
     }
     double projQuery = n->project(query);
     int childIndex = n->getChildIndex(projQuery);
     return lookup(query, n->children[childIndex]);
 }
 
-template <uint D, typename V>
-typename PiTree<D,V>::datum * PiTree<D,V>::localSearch(array<double, D> query, double projQuery, node * n, uint start) {
-    int l = start;
-    while(l < n->end && compare(projQuery, n->project(data[l].first)) == 0) {
-        bool equal = true;
-        for(uint i = 0; i < D; i++) {
-            if (compare(query[i], data[l].first[i]) != 0) {
-                equal = false;
-                break;
-            }
-        }
-        if (equal) {
-            return &data[l];
-        }
-        l++;
-    }
-    l = start;
-    while(l >= n->start && compare(projQuery, n->project(data[l].first) == 0)) {
-        bool equal = true;
-        for(uint i = 0; i < D; i++) {
-            if (compare(query[i], data[l].first[i]) != 0) {
-                equal = false;
-                break;
-            }
-        }
-        if (equal) {
-            return &data[l];
-        }
-        l--;
-    }
-    return nullptr;
-}
-
-
-// Leaf search is a little complicated.
-// Part of the complexity arises from the fact that even if n->project(data[i].first) == projQuery
-// it doesn't mean that query == data[i].first. 
-// Once leaf search finds such an i, call localSearch which will use equality across all dimensions to verify a match in a segment around i.
-
-// Leaf search is a 4 step process:
-// 1. Find leftBound in [start, end] such that n->project(data[leftBound]) < projQuery, using exponential search
-// 2. Find rightBound in [start, end] such that n->project(data[rightBound]) > projQuery, using exponential search
-// 3. Do binary search to find an index i such that n->project(data[i].first) == projQuery
-// 4. Do local search around i to see if any values in the dataset are strictly equal to query.
-
-// Either step 1 or 2 will run, not both.
-// If an index i such that n->project(data[i].first) == projQuery is found, then immediately do local search
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::searchLeaf(array<double, D> query, node * n) {
     assert(n->isLeaf);
