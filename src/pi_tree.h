@@ -73,6 +73,13 @@ class PiTree {
             }
             return s;
         }
+        uint size() {
+            uint ret = 1;
+            for(uint i = 0; i < children.size(); i++) {
+                ret += children[i]->size();
+            }
+            return ret;
+        }
     };
     node * root;
 
@@ -102,6 +109,9 @@ public:
     }
     size_t memorySize() {
         return sizeof(PiTree<D,V>) + root->memorySize();
+    }
+    uint size() {
+        return root->size();
     }
 };
 
