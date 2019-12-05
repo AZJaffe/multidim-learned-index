@@ -65,6 +65,14 @@ class PiTree {
             uint prediction = floor(model.predict(d) * (end - start)) + start;
             return max(start, min(prediction, end - 1));
         };
+        size_t memorySize() {
+            size_t s = sizeof(node);
+            s += children.capacity() * sizeof(node *);
+            for(uint i = 0; i < children.size(); i++) {
+                s += children[i]->memorySize();
+            }
+            return s;
+        }
     };
     node * root;
 
@@ -91,6 +99,9 @@ public:
     }
     void printTree(bool printData = false) {
         printSubTree(root, 0, printData);
+    }
+    size_t memorySize() {
+        return sizeof(PiTree<D,V>) + root->memorySize();
     }
 };
 
