@@ -35,7 +35,7 @@ class PiTree {
     typedef pair<array<double, D>, V> datum;
 
     vector<datum> &data; // Data is an array of arrays of doubles of size D
-    uint fanout; // For now, this is constant
+    uint maxFanout; // For now, this is constant
     uint height; // e.g. a tree where the node is a leaf has height 1
     uint pageSize; // This is the upper bound on the page size.
 
@@ -43,9 +43,9 @@ class PiTree {
         vector<node *> children;
         array<double, D> proj;
         LinearModel model;
-        bool isLeaf;
-        int start; 
-        int end;
+        uint fanout; // a node is a leaf if fanout <= 1 and internal otherwise
+        uint start; 
+        uint end;
         node() : model(LinearModel(0,0)) {}
         ~node() {
             for(auto n : children) {
@@ -55,14 +55,14 @@ class PiTree {
         double project(array<double, D> &d) {
             return inner_product(d.begin(), d.end(), proj.begin(), 0.0);
         };
-        int getChildIndex(double d) {
-            assert(!isLeaf);
-            int prediction = floor(model.predict(d) * children.size());
-            return max(0, min(prediction, (int)children.size() - 1));
+        uint getChildIndex(double d) {
+            assert(fanout > 1);
+            int prediction = floor(model.predict(d) * fanout);
+            return min(fanout - 1, (uint)max(0, prediction));
         };
-        int getIndex(double d) {
-            assert(isLeaf);
-            int prediction = floor(model.predict(d) * (end - start)) + start;
+        uint getIndex(double d) {
+            assert(fanout <= 1);
+            uint prediction = floor(model.predict(d) * (end - start)) + start;
             return max(start, min(prediction, end - 1));
         };
     };
@@ -75,7 +75,7 @@ class PiTree {
     void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n);
 
 public:
-    PiTree(vector<datum> &data, uint fanout, uint pageSize);
+    PiTree(vector<datum> &data, uint maxFanout, uint pageSize);
     ~PiTree() {
         delete root;
     }
@@ -95,10 +95,10 @@ public:
 };
 
 template <uint D, typename V>
-PiTree<D,V>::PiTree(vector<datum> &data, uint fanout, uint pageSize) :
-data(data), fanout(fanout), pageSize(pageSize) {
-    assert(fanout > 0);
-    assert(pageSize > 1);
+PiTree<D,V>::PiTree(vector<datum> &data, uint maxFanout, uint pageSize) :
+data(data), maxFanout(maxFanout), pageSize(pageSize) {
+    assert(maxFanout > 0);
+    assert(pageSize >= 1);
     root = buildSubTree(0, data.size(), 0);
 }
 
@@ -123,10 +123,10 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     }
     n->model = builder.fit();
     TPRINT("regressor=(" << n->model.slope << "x + " << n->model.bias << ")");
-    n->isLeaf = (end - start < pageSize);
-    if (!n->isLeaf) {
+    n->fanout = min(maxFanout, (uint)ceil((double)(end - start) / pageSize));
+    if (n->fanout > 1) {
         uint childStart = start;
-        double childMaxVal = 1.0 / (double)fanout;
+        double childMaxVal = 1.0 / n->fanout;
         double maxValIncrement = childMaxVal;
         for(uint i = start; i < end; i++) {
             double p = n->model.predict(
@@ -137,20 +137,18 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
                     buildSubTree(childStart, i, depth+1)
                 );
                 childStart = i;
-                if (n->children.size() == fanout - 1) {
+                if (n->children.size() == n->fanout - 1) {
                     childMaxVal = numeric_limits<double>::max();
                 } else {
                     childMaxVal += maxValIncrement;
                 }
             }
         }
-        while(n->children.size() < fanout) {
-            n->children.push_back(
-                buildSubTree(childStart, end, depth+1)
-            );
-            childStart = end;
-        }
-        assert(n->children.size() == fanout);
+        n->children.push_back(
+            buildSubTree(childStart, end, depth+1)
+        );
+        // n->children.size() might not equal the fanout
+        // e.g. if the fanout is 2 and the predictions for all datapoints lie within [0, 0.2], there will only be one child.
     }
     return n;
 }
@@ -170,9 +168,9 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         }
     }
 
-    if(n->isLeaf) {
-        int predictedMinIndex = n->getIndex(minProjection);
-        int predictedMaxIndex = n->getIndex(maxProjection);
+    if(n->fanout <= 1) {
+        uint predictedMinIndex = n->getIndex(minProjection);
+        uint predictedMaxIndex = n->getIndex(maxProjection);
         // The predicted indices could be off. Have to do exponential search to find the actual minIndex,maxIndex to search
 
         // 2 ways of doing this
@@ -198,10 +196,10 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         }
         return;
     } else {
-        int minChildIndex = n->getChildIndex(minProjection);
-        int maxChildIndex = n->getChildIndex(maxProjection);
+        uint minChildIndex = n->getChildIndex(minProjection);
+        uint maxChildIndex = n->getChildIndex(maxProjection);
 
-        for(int i = minChildIndex; i <= maxChildIndex; i++) {
+        for(uint i = minChildIndex; i <= maxChildIndex && i < n->children.size(); i++) {
             rangeQuery(ret, min, max, n->children[i]);
         }
         return;
@@ -210,10 +208,10 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
 
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
-    if(n->isLeaf) {
+    if(n->fanout <= 1) {
         double projQuery = n->project(query);
-        int prediction = n->getIndex(projQuery);
-        int p = max(n->start, min(prediction, n->end));
+        uint prediction = n->getIndex(projQuery);
+        uint p = max(n->start, min(prediction, n->end));
         auto it = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + p, projQuery, 
             [n](datum &d, double p) { return n->project(d.first) < p; });
         while(it < data.begin() + n->end && projQuery >= n->project(it->first)) {
@@ -232,8 +230,12 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
         return nullptr;
     }
     double projQuery = n->project(query);
-    int childIndex = n->getChildIndex(projQuery);
-    return lookup(query, n->children[childIndex]);
+    uint childIndex = n->getChildIndex(projQuery);
+    if(childIndex < n->children.size()) {
+        return lookup(query, n->children[childIndex]);
+    } else {
+        return nullptr;
+    }
 }
 
 // sorts the vector of data between indices start and end according
@@ -269,10 +271,10 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
     }
     cout << n->proj[D-1] << "] ";
     cout << "regressor=(" << n->model.slope << "x + " << n->model.bias << ") ";
-    cout << "isLeaf=" << n->isLeaf;
+    cout << "fanout=" << n->fanout;
     cout << endl;
-    if(n->isLeaf && printData) {
-        for(int i = n->start; i < n->end; i++) {
+    if(n->fanout <= 1 && printData) {
+        for(uint i = n->start; i < n->end; i++) {
             cout << string((int)depth * 2 + 2, ' ') << "- {[";
             for(uint d = 0; d < D-1; d++) {
                 cout << data[i].first[d] << ", ";
@@ -281,7 +283,16 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
             cout << data[i].second << "}" << endl;
         }
     }
-    for(uint i = 0; i < n->children.size(); i++) {
-        printSubTree(n->children[i], depth+1, printData);
+    if(n->fanout > 1) {
+        uint i = 0;
+        for(; i < n->children.size(); i++) {
+            printSubTree(n->children[i], depth+1, printData);
+        }
+        // The number of children might be less than the fanout
+        // For the rest, just print empty ranges.
+        for(; i < n->fanout; i++) {
+            cout << string((1 + (int)depth) * 2, ' ') << "- ";
+            cout << "range=[" << n->end << ", " << n->end << ")" << endl;
+        }
     }
 }
