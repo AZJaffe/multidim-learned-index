@@ -1,10 +1,10 @@
 CXX      := -g++
-CXXFLAGS := -g --std=c++17 -pedantic-errors -Wall -Wextra -Werror -O0
+CXXFLAGS := -g --std=c++17 -pedantic-errors -Wall -Wextra -Werror -O3
 BUILD_DIR := ./build
 TEST_DIR := $(BUILD_DIR)/test
 
 TESTS := $(wildcard *_test.cpp)
-SRCS := $(filter-out $(TESTS),$(wildcard *.h))
+SRCS := $(wildcard *.h)
 
 # Run make TRACE=1 to enable debug print statements and other information
 # Run make NDEBUG=1 to disable assertions (don't do this for tests)
@@ -17,12 +17,6 @@ ifeq ($(TRACE), 1)
 	CXXFLAGS += -DTRACE
 endif
 
-.PHONY: tests
-tests: build $(TESTS:%.cpp=$(TEST_DIR)/%.out)
-
-$(TEST_DIR)/%_test.out: %_test.cpp $(SRCS)
-	$(CXX) $(CXXFLAGS) -o $@ $<
-
 .PHONY: build
 build:
 	@mkdir -p $(TEST_DIR)
@@ -33,3 +27,12 @@ clean:
 
 echo:
 	@echo srcs: $(SRCS) tests: $(TESTS)
+
+.PHONY: tests
+tests: build $(TESTS:%.cpp=$(TEST_DIR)/%.out)
+
+$(TEST_DIR)/%_test.out: %_test.cpp $(SRCS)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+$(TEST_DIR)/benchmark.out: benchmark.cpp $(SRCS) build
+	$(CXX) $(CXXFLAGS) -o $@ $<

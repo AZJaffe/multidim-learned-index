@@ -13,6 +13,7 @@ using namespace std;
 #include <iostream>
 #include <iomanip>
 #include <math.h>
+#include <cassert>
 
 struct LinearModel {
 public:

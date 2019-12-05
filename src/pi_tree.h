@@ -277,4 +277,3 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
         printSubTree(n->children[i], depth+1, printData);
     }
 }
-
