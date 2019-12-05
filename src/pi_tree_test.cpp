@@ -26,7 +26,6 @@ void testPairSort(bool debug = false) {
         cout << endl;
     }
     PiTree<D,int> *t = new PiTree<D,int>(data, 10, 100);
-    (void)*t;
 
     if (debug) {
         cout << "after:" << endl;
@@ -43,6 +42,8 @@ void testPairSort(bool debug = false) {
     assert(data[4].second == 4);
     assert(data[5].second == 3);
     assert(data.size() == 6);
+    
+    delete t;
 }
 
 void testTreeBuild() {
@@ -70,6 +71,7 @@ void testTreeBuild2(bool debug = false) {
     }
     PiTree<D,int> *t = new PiTree<D,int>(data, 3, 10);
     if(debug) t->printTree();
+    delete t;
 }
 
 void testPointQuery() {
@@ -85,7 +87,7 @@ void testPointQuery() {
     PiTree<D,int> *t = new PiTree<D,int>(data, 1, 1000); // one level tree since fanout = N
     pair<array<double, D>, int> * d = t->lookup(data[12].first);
     assert(d != nullptr && d->second == data[12].second);
-    (void) d;
+    delete t;
 }
 
 void testRangeQuery(bool debug = false) {
@@ -139,6 +141,7 @@ void testRangeQuery(bool debug = false) {
     for(int i = 0; i < (int)ret.size(); i++) {
         assert(ret[i].second == i);
     }
+    delete t;
 }
 
 int main(void) {

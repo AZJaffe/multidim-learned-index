@@ -47,6 +47,11 @@ class PiTree {
         int start; 
         int end;
         node() : model(LinearModel(0,0)) {}
+        ~node() {
+            for(auto n : children) {
+                delete n;
+            }
+        }
         double project(array<double, D> &d) {
             return inner_product(d.begin(), d.end(), proj.begin(), 0.0);
         };
@@ -71,6 +76,9 @@ class PiTree {
 
 public:
     PiTree(vector<datum> &data, uint fanout, uint pageSize);
+    ~PiTree() {
+        delete root;
+    }
     datum * lookup(array<double, D> query) {
         return lookup(query, root);
     }

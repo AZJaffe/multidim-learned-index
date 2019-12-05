@@ -17,6 +17,10 @@ ifeq ($(TRACE), 1)
 	CXXFLAGS += -DTRACE
 endif
 
+ifeq ($(ASAN), 1)
+	CXXFLAGS += -fsanitize=address -static-libasan
+endif
+
 .PHONY: build
 build:
 	@mkdir -p $(TEST_DIR)
