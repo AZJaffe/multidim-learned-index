@@ -1,12 +1,5 @@
 #pragma once
 
-#ifdef TRACE
-#  define TPRINT(x) cout << x << endl
-#  define IFTRACE if(1)
-#else
-#  define TPRINT(x) do {} while (0)
-#  define IFTRACE if(0)
-#endif
 
 using namespace std;
 #include <algorithm>
@@ -21,6 +14,18 @@ using namespace std;
 #include "linear_cdf_regressor.h"
 #include "exponential_search.h"
 #include "util.h"
+
+#ifdef TRACE
+#  define TPRINT(x) cout << x << endl
+#  define IFTRACE if(1)
+#else
+#  define TPRINT(x) do {} while (0)
+#  define IFTRACE if(0)
+#endif
+
+#ifndef FANOUT_FACTOR
+#define FANOUT_FACTOR 10
+#endif
 
 // D is the dimension of the key of the data, V is the type of the data values
 template <uint D, typename V>
@@ -48,16 +53,11 @@ class PiTree {
         double project(array<double, D> &d) {
             return inner_product(d.begin(), d.end(), proj.begin(), 0.0);
         };
-        bool isLeaf() {
-            return fanout < 2;
-        }
         uint getChildIndex(double d) {
-            assert(!isLeaf());
             int prediction = floor(model.predict(d) * fanout);
             return min(fanout - 1, (uint)max(0, prediction));
         };
         uint getIndex(double d) {
-            assert(isLeaf());
             uint prediction = floor(model.predict(d) * (end - start)) + start;
             return max(start, min(prediction, end - 1));
         };
@@ -97,6 +97,9 @@ class PiTree {
     datum * lookup(array<double, D> query, node * n);
     void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n);
     size_t depth(node * n);
+    bool isLeaf(node * n) {
+        return n->end - n->start < pageSize;
+    }
 
 public:
     PiTree(vector<datum> &data, uint maxFanout, uint pageSize);
@@ -157,33 +160,35 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     }
     n->model = builder.fit();
     TPRINT("regressor=(" << n->model.slope << "x + " << n->model.bias << ")");
-    n->fanout = min(maxFanout, (uint)ceil((double)(end - start) / pageSize));
-    if (!n->isLeaf()) {
-        uint childStart = start;
-        double childMaxVal = 1.0 / n->fanout;
-        double maxValIncrement = childMaxVal;
-        for(uint i = start; i < end; i++) {
-            double p = n->model.predict(
-                n->project(data[i].first)
+    if (isLeaf(n)) {
+        n->fanout = 0;
+        return n;
+    }
+    n->fanout = min(maxFanout, FANOUT_FACTOR * (uint)ceil((double)(end - start) / pageSize));
+    uint childStart = start;
+    double childMaxVal = 1.0 / n->fanout;
+    double maxValIncrement = childMaxVal;
+    for(uint i = start; i < end; i++) {
+        double p = n->model.predict(
+            n->project(data[i].first)
+        );
+        while (p >= childMaxVal) {
+            n->children.push_back(
+                buildSubTree(childStart, i, depth+1)
             );
-            while (p >= childMaxVal) {
-                n->children.push_back(
-                    buildSubTree(childStart, i, depth+1)
-                );
-                childStart = i;
-                if (n->children.size() == n->fanout - 1) {
-                    childMaxVal = numeric_limits<double>::max();
-                } else {
-                    childMaxVal += maxValIncrement;
-                }
+            childStart = i;
+            if (n->children.size() == n->fanout - 1) {
+                childMaxVal = numeric_limits<double>::max();
+            } else {
+                childMaxVal += maxValIncrement;
             }
         }
-        n->children.push_back(
-            buildSubTree(childStart, end, depth+1)
-        );
-        // n->children.size() might not equal the fanout
-        // e.g. if the fanout is 2 and the predictions for all datapoints lie within [0, 0.2], there will only be one child.
     }
+    // n->children.size() might not equal the fanout
+    // e.g. if the fanout is 2 and the predictions for all datapoints lie within [0, 0.2], there will only be one child.
+    n->children.push_back(
+        buildSubTree(childStart, end, depth+1)
+    );
     return n;
 }
 
@@ -202,7 +207,7 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         }
     }
 
-    if(n->isLeaf()) {
+    if(isLeaf(n)) {
         uint predictedMinIndex = n->getIndex(minProjection);
         uint predictedMaxIndex = n->getIndex(maxProjection);
         // The predicted indices could be off. Have to do exponential search to find the actual minIndex,maxIndex to search
@@ -217,7 +222,7 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
 
         TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << start - data.begin() << ", " << end - data.begin() << ")");
         for(auto it = start; it < end; it++) {
-            if (withinRange<2>(it->first, min, max)) {
+            if (withinRange<D>(it->first, min, max)) {
                 ret.push_back(*it);
             }
         }
@@ -235,7 +240,7 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
 
 template <uint D, typename V>
 typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node * n) {
-    if(n->isLeaf()) {
+    if(isLeaf(n)) {
         double projQuery = n->project(query);
         uint prediction = n->getIndex(projQuery);
         uint p = max(n->start, min(prediction, n->end));
@@ -300,7 +305,7 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
     cout << "regressor=(" << n->model.slope << "x + " << n->model.bias << ") ";
     cout << "fanout=" << n->fanout;
     cout << endl;
-    if(n->isLeaf() && printData) {
+    if(isLeaf(n) && printData) {
         for(uint i = n->start; i < n->end; i++) {
             cout << string((int)depth * 2 + 2, ' ') << "- {[";
             for(uint d = 0; d < D-1; d++) {
@@ -310,7 +315,7 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
             cout << data[i].second << "}" << endl;
         }
     }
-    if(!n->isLeaf()) {
+    if(!isLeaf(n)) {
         uint i = 0;
         for(; i < n->children.size(); i++) {
             printSubTree(n->children[i], depth+1, printData);
@@ -326,7 +331,7 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
 
 template <uint D, typename V>
 size_t PiTree<D,V>::depth(node * n) {
-    if(n->isLeaf()) {
+    if(isLeaf(n)) {
         return 1;
     }
     size_t max = 1;
@@ -401,7 +406,7 @@ void PiTree<D,V>::printTreeStats() {
 
 template <uint D, typename V>
 void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,V>::node * n, size_t depth) {
-    if(n->isLeaf()) {
+    if(isLeaf(n)) {
         s.numLeaves++;
         size_t range = n->end - n->start;
         s.minDepthOfLeaf = depth < s.minDepthOfLeaf ? depth : s.minDepthOfLeaf;
