@@ -20,14 +20,7 @@ using namespace std;
 #include <vector>
 #include "linear_cdf_regressor.h"
 #include "exponential_search.h"
-
-// TODO? make a better double comparison
-int compare(double a, double b) {
-    if (abs(a - b) < numeric_limits<double>::epsilon()) {
-        return 0;
-    }
-    return a < b ? -1 : 1;
-}
+#include "util.h"
 
 // D is the dimension of the key of the data, V is the type of the data values
 template <uint D, typename V>
@@ -204,14 +197,7 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
 
         TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << start - data.begin() << ", " << end - data.begin() << ")");
         for(auto it = start; it < end; it++) {
-            bool withinBounds = true;
-            for(uint d = 0; d < D; d++) {
-                if (it->first[d] < min[d] || it->first[d] > max[d]) {
-                    withinBounds = false;
-                    break;
-                }
-            }
-            if (withinBounds) {
+            if (withinRange<2>(it->first, min, max)) {
                 ret.push_back(*it);
             }
         }
