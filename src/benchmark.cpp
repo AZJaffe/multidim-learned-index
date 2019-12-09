@@ -23,6 +23,7 @@ struct results {
     chrono::duration<double> loadTime;
     chrono::duration<double> queryTime;
     string name;
+    vector<size_t> resultSetSize;
 };
 
 template <uint D>
@@ -67,11 +68,12 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
     PiTree<D,int> t = PiTree<D, int>(b.data, maxFanout, pageSize);
     r.loadTime = chrono::steady_clock::now() - start;
 
+    // t.printTreeStats();
+
     start = chrono::steady_clock::now();
     auto it2 = b.max.begin();
     for (auto it = b.min.begin(); it != b.min.end(); it++, it2++) {
-        auto v = t.rangeQuery(*it, *it2); // Assign to variable so compiler doesn't optimize this out
-        (void)v; // Make sure compiler doesn't optimize out!
+        r.resultSetSize.push_back(t.rangeQuery(*it, *it2).size());
     }
     r.queryTime = chrono::steady_clock::now() - start;
     return r;
@@ -87,8 +89,7 @@ results benchmarkFullScan(benchmark<D> & b) {
     start = chrono::steady_clock::now();
     auto it2 = b.max.begin();
     for (auto it = b.min.begin(); it != b.min.end(); it++, it2++) {
-        auto v = f.rangeQuery(*it, *it2); // Assign to variable so compiler doesn't optimize this out
-        (void)v; // Make sure compiler doesn't optimize out!
+        r.resultSetSize.push_back(f.rangeQuery(*it, *it2).size());
     }
     r.queryTime = chrono::steady_clock::now() - start;
     return r;
@@ -109,18 +110,22 @@ void printResults(results &r, benchmark<D> & b) {
 template<uint D>
 void printBenchmarkInformation(benchmark<D> &b) {
     cout << "Benchmark Details:" << endl;
-    cout << "  - Type         : " << b.name << endl;
-    cout << "  - Dimension    : " << b.min[0].size() << endl;
-    cout << "  - # Data points: " << b.data.size() << endl;
-    cout << "  - # Queries    : " << b.min.size() << endl;
+    cout << "  - Type           : " << b.name << endl;
+    cout << "  - Dimension      : " << b.min[0].size() << endl;
+    cout << "  - # Data points  : " << b.data.size() << endl;
+    cout << "  - # Queries      : " << b.min.size() << endl;
+    cout << "  - Avg Selectivity: " << b.selectivity << endl;
     cout << endl;
 }
 
 int main(void) {
-    auto b = uniformRandomDataset<2>(1e7, 1e3, 0.01); // TODO? make the parameters arguments
+    auto b = uniformRandomDataset<2>(1e6, 1e2, 0.5); // TODO make the parameters arguments
     printBenchmarkInformation(b);
-    auto piTreeResults = benchmarkPiTree(b, 1e3, 5e3);
+    auto piTreeResults = benchmarkPiTree(b, 1e3, 5e2);
     printResults(piTreeResults, b);
     auto fullScanResults = benchmarkFullScan(b);
     printResults(fullScanResults, b);
+    for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
+        assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
+    }
 }
