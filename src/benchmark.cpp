@@ -67,6 +67,8 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
     PiTree<D,int> t = PiTree<D, int>(b.data, maxFanout, pageSize);
     r.loadTime = chrono::steady_clock::now() - start;
 
+    t.printTreeStats();
+
     start = chrono::steady_clock::now();
     auto it2 = b.max.begin();
     for (auto it = b.min.begin(); it != b.min.end(); it++, it2++) {
@@ -117,9 +119,9 @@ void printBenchmarkInformation(benchmark<D> &b) {
 }
 
 int main(void) {
-    auto b = uniformRandomDataset<2>(1e7, 1e3, 0.01); // TODO? make the parameters arguments
+    auto b = uniformRandomDataset<2>(1e6, 1e2, 0.01); // TODO? make the parameters arguments
     printBenchmarkInformation(b);
-    auto piTreeResults = benchmarkPiTree(b, 1e3, 5e3);
+    auto piTreeResults = benchmarkPiTree(b, 1e3, 5e2);
     printResults(piTreeResults, b);
     auto fullScanResults = benchmarkFullScan(b);
     printResults(fullScanResults, b);
