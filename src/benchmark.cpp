@@ -110,15 +110,16 @@ void printResults(results &r, benchmark<D> & b) {
 template<uint D>
 void printBenchmarkInformation(benchmark<D> &b) {
     cout << "Benchmark Details:" << endl;
-    cout << "  - Type         : " << b.name << endl;
-    cout << "  - Dimension    : " << b.min[0].size() << endl;
-    cout << "  - # Data points: " << b.data.size() << endl;
-    cout << "  - # Queries    : " << b.min.size() << endl;
+    cout << "  - Type           : " << b.name << endl;
+    cout << "  - Dimension      : " << b.min[0].size() << endl;
+    cout << "  - # Data points  : " << b.data.size() << endl;
+    cout << "  - # Queries      : " << b.min.size() << endl;
+    cout << "  - Avg Selectivity: " << b.selectivity << endl;
     cout << endl;
 }
 
 int main(void) {
-    auto b = uniformRandomDataset<2>(1e3, 1e2, 0.1); // TODO? make the parameters arguments
+    auto b = uniformRandomDataset<2>(1e6, 1e2, 0.5); // TODO make the parameters arguments
     printBenchmarkInformation(b);
     auto piTreeResults = benchmarkPiTree(b, 1e3, 5e2);
     printResults(piTreeResults, b);
