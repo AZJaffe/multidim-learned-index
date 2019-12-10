@@ -1,5 +1,8 @@
 # Multi-Dimentional Learned Index for Range Queries
 
+## Dependencies
+1.  boost: Ubuntu install `sudo apt-get install libboost-all-dev`
+
 ## Datasets
 1.  Random: uniform random distribution, random query ranges
 2.  Normal: normal distribution, query ranges are large
