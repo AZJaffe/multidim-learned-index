@@ -471,12 +471,13 @@ void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,
 template <uint D, typename V>
 void PiTree<D,V>::printQueryStats() {
     cout << "PiTree Range Query Statistics:" << endl;
-    cout << "  - # queries: " << stats.totalQueries << endl;
-    cout << "  - hit: " << (double)stats.totalHit / (stats.totalHit + stats.totalMiss) << endl;
-    cout << "  - avg leaves/query: " << (double)stats.totalLeavesVisited / stats.totalQueries << endl;
-    cout << "  - avg internal/query: " << (double)stats.totalInternalVisited / stats.totalQueries << endl;
-    cout << "  - refinement: " << (double)(stats.totalHit + stats.totalMiss) / stats.totalLeafSizes << endl;
-    cout << "  - prediction stats:" << endl;
+    cout << "  - Queries                    : " << stats.totalQueries << endl;
+    cout << "  - Avg Scanned                : " << (double)(stats.totalHit + stats.totalMiss) * 100 / data.size() << "%" << endl;
+    cout << "  - Avg Hit/Scanned            : " << (double)stats.totalHit * 100 / (stats.totalHit + stats.totalMiss) << "%" << endl;
+    cout << "  - Avg Leaves Searched/Query  : " << (double)stats.totalLeavesVisited / stats.totalQueries << endl;
+    cout << "  - Avg Internal Visited/Query : " << (double)stats.totalInternalVisited / stats.totalQueries << endl;
+    cout << "  - Avg Refinement             : " << (double)(stats.totalHit + stats.totalMiss) * 100  / stats.totalLeafSizes << "%" << endl;
+    cout << "  - Prediction Error Stats     :" << endl;
     // 2x since each leaf visited has two predictions - start and end.
     cout << "    * [0, 0]:" << (double)stats.predictionError[0] / (2 * stats.totalLeavesVisited) << endl;
     size_t total = 2 * stats.totalLeavesVisited - stats.predictionError[0];
