@@ -23,6 +23,10 @@ using namespace std;
 #  define IFTRACE if(0)
 #endif
 
+#ifndef COLLECT_STATS
+#define COLLECT_STATS true
+#endif
+
 #ifndef FANOUT_FACTOR
 #define FANOUT_FACTOR 10
 #endif
@@ -79,6 +83,22 @@ class PiTree {
     };
     node * root;
 
+    struct queryStatistics {
+        size_t totalQueries;
+        size_t totalHit;
+        size_t totalMiss;
+        size_t totalLeafSizes;
+        size_t totalInternalVisited;
+        size_t totalLeavesVisited;
+        array<size_t, 20> predictionError; // Index i corresponds to prediction error less than 2^i
+        queryStatistics() : totalQueries(0), totalHit(0), totalMiss(0), totalLeafSizes(0) {
+            for(auto it = predictionError.begin(); it != predictionError.end(); it++) {
+                *it = 0;
+            }
+        }
+    };
+    queryStatistics stats;
+
     struct structureData {
         vector<size_t> rangeOfLeaf;
         vector<size_t> depthOfLeaf;
@@ -100,6 +120,12 @@ class PiTree {
     bool isLeaf(node * n) {
         return n->end - n->start < pageSize;
     }
+    size_t getPredictionErrorIdx(uint predicted, uint actual) {
+        if(predicted - actual == 0) {
+            return 0;
+        }
+        return floor(log2(abs((long)predicted - (long)actual))) + 1;
+    }
 
 public:
     PiTree(vector<datum> &data, uint maxFanout, uint pageSize);
@@ -114,17 +140,24 @@ public:
         assert(root != nullptr);
         vector<datum> ret;
         rangeQuery(ret, min, max, root);
+        if(COLLECT_STATS) stats.totalQueries++;
+        if(COLLECT_STATS) stats.totalHit += ret.size();
         return ret;
     }
     void printTree(bool printData = false) {
         printSubTree(root, 0, printData);
     }
     void printTreeStats();
+    void printQueryStats();
+    void resetQueryStats() {
+        stats = queryStatistics();
+    }
     size_t depth() {
         return depth(root);
     }
     size_t memorySize() {
-        return sizeof(PiTree<D,V>) + root->memorySize();
+        return sizeof(PiTree<D,V>) + root->memorySize() - sizeof(queryStatistics);
+        // don't count queryStatistics
     }
     uint size() {
         return root->size();
@@ -208,17 +241,26 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
     }
 
     if(isLeaf(n)) {
-        uint predictedMinIndex = n->getIndex(minProjection);
-        uint predictedMaxIndex = n->getIndex(maxProjection);
+        if (COLLECT_STATS) stats.totalLeavesVisited++;
+        if (COLLECT_STATS) stats.totalLeafSizes += n->end - n->start;
+
+        uint predictedStart = n->getIndex(minProjection);
+        uint predictedEnd = n->getIndex(maxProjection);
         // The predicted indices could be off. Have to do exponential search to find the actual minIndex,maxIndex to search
 
         // 2 ways of doing this
         // first is the get lower bound then iterate and check every stage
         // second is to get lower and upper bound, then iterate between (without checking)
-        auto start = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedMinIndex, minProjection,
+        // Doing it the second way, maybe first is faster?
+        auto start = exponentialSearchLowerBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedStart, minProjection,
             [n](datum &d, double p) { return n->project(d.first) < p; });
-        auto end = exponentialSearchUpperBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedMaxIndex, maxProjection,
+        auto end = exponentialSearchUpperBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedEnd, maxProjection,
             [n](double p, datum &d) { return p < n->project(d.first); });
+
+        if (COLLECT_STATS) stats.predictionError[getPredictionErrorIdx(predictedStart, start - data.begin())]++;
+        if (COLLECT_STATS) stats.predictionError[getPredictionErrorIdx(predictedEnd, end - data.begin())]++;
+
+        size_t beforeSize; if (COLLECT_STATS) beforeSize = ret.size();
 
         TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << start - data.begin() << ", " << end - data.begin() << ")");
         for(auto it = start; it < end; it++) {
@@ -226,8 +268,11 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
                 ret.push_back(*it);
             }
         }
+        // # missed = (# scanned) - (# hit)
+        if (COLLECT_STATS) stats.totalMiss += (end - start) - (ret.size() - beforeSize);
         return;
     } else {
+        if (COLLECT_STATS) stats.totalInternalVisited++;
         uint minChildIndex = n->getChildIndex(minProjection);
         uint maxChildIndex = n->getChildIndex(maxProjection);
 
@@ -419,5 +464,27 @@ void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,
         for(auto it = n->children.begin(); it != n->children.end(); it++) {
             collectStructureData(s, *it, depth + 1);
         }
+    }
+}
+
+
+template <uint D, typename V>
+void PiTree<D,V>::printQueryStats() {
+    cout << "PiTree Range Query Statistics:" << endl;
+    cout << "  - # queries: " << stats.totalQueries << endl;
+    cout << "  - hit: " << (double)stats.totalHit / (stats.totalHit + stats.totalMiss) << endl;
+    cout << "  - avg leaves/query: " << (double)stats.totalLeavesVisited / stats.totalQueries << endl;
+    cout << "  - avg internal/query: " << (double)stats.totalInternalVisited / stats.totalQueries << endl;
+    cout << "  - refinement: " << (double)(stats.totalHit + stats.totalMiss) / stats.totalLeafSizes << endl;
+    cout << "  - prediction stats:" << endl;
+    // 2x since each leaf visited has two predictions - start and end.
+    cout << "    * [0, 0]:" << (double)stats.predictionError[0] / (2 * stats.totalLeavesVisited) << endl;
+    size_t total = 2 * stats.totalLeavesVisited - stats.predictionError[0];
+    for (size_t i = 1; i < stats.predictionError.size(); i++) {
+        if (total < 1) break;
+        total -= stats.predictionError[i];
+        int start = pow(i - 1, 2);
+        int end = pow(i, 2);
+        cout << "    * [" << start << ", " << end << "): " << (double)stats.predictionError[i] / (2 * stats.totalLeavesVisited) << endl;
     }
 }
