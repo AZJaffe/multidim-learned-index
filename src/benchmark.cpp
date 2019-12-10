@@ -8,6 +8,7 @@
 #include "pi_tree.h"
 #include "full_scan.h"
 #include "util.h"
+#include "kd-tree/kd_tree.h"
 
 using namespace std;
 
@@ -132,6 +133,40 @@ results benchmarkFullScan(benchmark<D> & b) {
     return r;
 }
 
+template <uint D>
+results benchmarkKDTree(benchmark<D> & b) {
+    // reformat points and queries to kd-tree input format
+    if (D != 2) {
+        cout << "This kd-tree only supports 2D data" << endl;
+        assert(1==0);
+    }
+    uint numData = b.data.size();
+    uint numQueries = b.min.size();
+    PointType<double> *points; 
+    points = new PointType<double>[numData];
+    for (uint i = 0; i < numData; ++i) {
+        points[i].x = (b.data[i].first)[0];
+        points[i].y = b.data[i].first[1]; 
+    }
+    vector<region<double>> queries(numQueries);
+    for (uint i = 0; i < numQueries; ++i) {
+        queries[i] = region<double>(b.min[i][0], b.max[i][0], b.min[i][1], b.max[i][1]);
+    }
+    
+    KD_Tree<double> t;
+    results r;
+    r.name = "KD-Tree";
+    auto start = chrono::steady_clock::now();
+    t.buildKD_Tree(points, numData);
+    r.loadTime = chrono::steady_clock::now() - start;
+    start = chrono::steady_clock::now();
+    for (uint i = 0; i < numQueries; ++i) {
+        r.resultSetSize.push_back(t.searchKD_Tree(queries[i]));
+    }
+    r.queryTime = chrono::steady_clock::now() - start;
+    return r;
+}
+
 template<uint D>
 void printResults(results &r, benchmark<D> & b) {
     int64_t loadTime = chrono::duration_cast<chrono::milliseconds>(r.loadTime).count();
@@ -156,14 +191,18 @@ void printBenchmarkInformation(benchmark<D> &b) {
 }
 
 void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout, uint pageSize) {
+    cout << "==============================================" << endl;
     auto b = loadData<2>(numData, numQueries, distribution);
     printBenchmarkInformation(b);
-    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
-    printResults(piTreeResults, b);
     auto fullScanResults = benchmarkFullScan(b);
     printResults(fullScanResults, b);
+    auto kdTreeResults = benchmarkKDTree(b);
+    printResults(kdTreeResults, b);
+    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
+    printResults(piTreeResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
+        assert(fullScanResults.resultSetSize[i] == kdTreeResults.resultSetSize[i]);
     }
 }
 
