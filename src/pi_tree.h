@@ -1,10 +1,9 @@
 #pragma once
 
-
-using namespace std;
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -23,13 +22,16 @@ using namespace std;
 #  define IFTRACE if(0)
 #endif
 
-#ifndef COLLECT_STATS
-#define COLLECT_STATS true
+#ifndef STATS
+#define STATS true
 #endif
 
 #ifndef FANOUT_FACTOR
 #define FANOUT_FACTOR 10
 #endif
+
+using namespace std;
+using namespace std::chrono;
 
 // D is the dimension of the key of the data, V is the type of the data values
 template <uint D, typename V>
@@ -91,6 +93,10 @@ class PiTree {
         size_t totalInternalVisited;
         size_t totalLeavesVisited;
         array<size_t, 20> predictionError; // Index i corresponds to prediction error less than 2^i
+        vector<microseconds> queryLatency;
+        vector<microseconds> scanLatency;
+        vector<microseconds> refineLatency;
+        vector<microseconds> traverseLatency;
         queryStatistics() : totalQueries(0), totalHit(0), totalMiss(0), totalLeafSizes(0) {
             for(auto it = predictionError.begin(); it != predictionError.end(); it++) {
                 *it = 0;
@@ -115,7 +121,7 @@ class PiTree {
     void pairSort(node & n);
     void printSubTree(node * n, uint depth, bool printData = false);
     datum * lookup(array<double, D> query, node * n);
-    void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n);
+    void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n, microseconds & refine, microseconds & scan);
     size_t depth(node * n);
     bool isLeaf(node * n) {
         return n->end - n->start < pageSize;
@@ -136,12 +142,26 @@ public:
         return lookup(query, root);
     }
     vector<datum> rangeQuery(array<double, D> min, array<double, D> max) {
-        IFTRACE for(uint i = 0; i < D; i++) assert(min[i] <= max[i]);
+        for(uint i = 0; i < D; i++) assert(min[i] <= max[i]);
         assert(root != nullptr);
+        steady_clock::time_point start; if(STATS) start = steady_clock::now();
+        microseconds refineTime; microseconds scanTime; 
+        if(STATS) {
+            refineTime = microseconds(0);
+            scanTime = microseconds(0);
+        }
         vector<datum> ret;
-        rangeQuery(ret, min, max, root);
-        if(COLLECT_STATS) stats.totalQueries++;
-        if(COLLECT_STATS) stats.totalHit += ret.size();
+        rangeQuery(ret, min, max, root, refineTime, scanTime);
+        steady_clock::time_point end; if(STATS) end = steady_clock::now();
+        if (STATS) {
+            auto qTime = duration_cast<microseconds>(end - start);
+            stats.queryLatency.push_back(qTime);
+            stats.scanLatency.push_back(scanTime);
+            stats.refineLatency.push_back(refineTime);
+            stats.traverseLatency.push_back(qTime - scanTime - refineTime);
+            stats.totalQueries++;
+            stats.totalHit += ret.size();
+        }
         return ret;
     }
     void printTree(bool printData = false) {
@@ -157,7 +177,6 @@ public:
     }
     size_t memorySize() {
         return sizeof(PiTree<D,V>) + root->memorySize() - sizeof(queryStatistics);
-        // don't count queryStatistics
     }
     uint size() {
         return root->size();
@@ -226,7 +245,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
 }
 
 template<uint D, typename V>
-void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<double, D> min, array<double, D> max, node * n) {
+void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<double, D> min, array<double, D> max, node * n, microseconds & refine, microseconds & scan) {
     double minProjection = 0; double maxProjection = 0;
     for(uint i = 0; i < D; i++) {
         double minProduct = n->proj[i] * min[i];
@@ -241,8 +260,12 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
     }
 
     if(isLeaf(n)) {
-        if (COLLECT_STATS) stats.totalLeavesVisited++;
-        if (COLLECT_STATS) stats.totalLeafSizes += n->end - n->start;
+        steady_clock::time_point before, after;
+        if (STATS) {
+            stats.totalLeavesVisited++;
+            stats.totalLeafSizes += n->end - n->start;
+            before = steady_clock::now(); // Start of refinement
+        }
 
         uint predictedStart = n->getIndex(minProjection);
         uint predictedEnd = n->getIndex(maxProjection);
@@ -257,10 +280,16 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         auto end = exponentialSearchUpperBound(data.begin() + n->start, data.begin() + n->end, data.begin() + predictedEnd, maxProjection,
             [n](double p, datum &d) { return p < n->project(d.first); });
 
-        if (COLLECT_STATS) stats.predictionError[getPredictionErrorIdx(predictedStart, start - data.begin())]++;
-        if (COLLECT_STATS) stats.predictionError[getPredictionErrorIdx(predictedEnd, end - data.begin())]++;
 
-        size_t beforeSize; if (COLLECT_STATS) beforeSize = ret.size();
+        size_t beforeSize;
+        if (STATS) {
+            after = steady_clock::now(); // End of refinement and start of scanning
+            refine += duration_cast<microseconds>(after - before);
+            stats.predictionError[getPredictionErrorIdx(predictedStart, start - data.begin())]++;
+            stats.predictionError[getPredictionErrorIdx(predictedEnd, end - data.begin())]++;
+            beforeSize = ret.size();
+            before = after;
+        }
 
         TPRINT("Range scanning node with range [" << n->start << ", " << n->end << ") on subrange [" << start - data.begin() << ", " << end - data.begin() << ")");
         for(auto it = start; it < end; it++) {
@@ -268,16 +297,20 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
                 ret.push_back(*it);
             }
         }
-        // # missed = (# scanned) - (# hit)
-        if (COLLECT_STATS) stats.totalMiss += (end - start) - (ret.size() - beforeSize);
+        if (STATS) {
+            after = steady_clock::now();
+            scan += duration_cast<microseconds>(after - before);
+            // # missed = (# scanned) - (# hit)
+            stats.totalMiss += (end - start) - (ret.size() - beforeSize);
+        }
         return;
     } else {
-        if (COLLECT_STATS) stats.totalInternalVisited++;
+        if (STATS) stats.totalInternalVisited++;
         uint minChildIndex = n->getChildIndex(minProjection);
         uint maxChildIndex = n->getChildIndex(maxProjection);
 
         for(uint i = minChildIndex; i <= maxChildIndex && i < n->children.size(); i++) {
-            rangeQuery(ret, min, max, n->children[i]);
+            rangeQuery(ret, min, max, n->children[i], refine, scan);
         }
         return;
     }
@@ -470,16 +503,32 @@ void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,
 
 template <uint D, typename V>
 void PiTree<D,V>::printQueryStats() {
+
+    sort(stats.queryLatency.begin(), stats.queryLatency.end()); // sort to get the percentiles
+    auto avgLatency = accumulate(stats.queryLatency.begin(), stats.queryLatency.end(), microseconds(0)).count() / stats.totalQueries;
+    auto avgScanLatency = accumulate(stats.scanLatency.begin(), stats.scanLatency.end(), microseconds(0)).count() / stats.totalQueries;
+    auto avgRefineLatency = accumulate(stats.refineLatency.begin(), stats.refineLatency.end(), microseconds(0)).count() / stats.totalQueries;
+    auto avgTraverseLatency = accumulate(stats.traverseLatency.begin(), stats.traverseLatency.end(), microseconds(0)).count() / stats.totalQueries;
+
     cout << "PiTree Range Query Statistics:" << endl;
     cout << "  - Queries                    : " << stats.totalQueries << endl;
-    cout << "  - Avg Scanned                : " << (double)(stats.totalHit + stats.totalMiss) * 100 / data.size() << "%" << endl;
+    cout << "  - Avg Scanned                : " << (double)(stats.totalHit + stats.totalMiss) * 100 / data.size() / stats.totalQueries << "%" << endl;
     cout << "  - Avg Hit/Scanned            : " << (double)stats.totalHit * 100 / (stats.totalHit + stats.totalMiss) << "%" << endl;
     cout << "  - Avg Leaves Searched/Query  : " << (double)stats.totalLeavesVisited / stats.totalQueries << endl;
     cout << "  - Avg Internal Visited/Query : " << (double)stats.totalInternalVisited / stats.totalQueries << endl;
     cout << "  - Avg Refinement             : " << (double)(stats.totalHit + stats.totalMiss) * 100  / stats.totalLeafSizes << "%" << endl;
-    cout << "  - Prediction Error Stats     :" << endl;
+    cout << "  - Median Latency             : " << stats.queryLatency[stats.queryLatency.size() * 50 / 100].count() << "μs" << endl;
+    cout << "  - 95th Percentile Latency    : " << stats.queryLatency[stats.queryLatency.size() * 95 / 100].count() << "μs" << endl;
+    cout << "  - 99th Percentile Latency    : " << stats.queryLatency[stats.queryLatency.size() * 99 / 100].count() << "μs" << endl;
+    cout << "  - 99.9th Percentile Latency  : " << stats.queryLatency[stats.queryLatency.size() * 999 / 1000].count() << "μs" << endl;
+    cout << "  - Max Latency                : " << stats.queryLatency[stats.queryLatency.size() - 1].count() << "μs" << endl;
+    cout << "  - Avg Latency                : " << avgLatency << "μs" << endl;
+    cout << "  - Avg Scan Latency           : " << avgScanLatency << "μs" << endl;
+    cout << "  - Avg Refine Latency         : " << avgRefineLatency << "μs" << endl;
+    cout << "  - Avg Traverse Latency       : " << avgTraverseLatency << "μs" << endl;
+    cout << "  - Prediction Error Stats     : " << endl;
     // 2x since each leaf visited has two predictions - start and end.
-    cout << "    * [0, 0]:" << (double)stats.predictionError[0] / (2 * stats.totalLeavesVisited) << endl;
+    cout << "    * [0, 0]: " << (double)stats.predictionError[0] / (2 * stats.totalLeavesVisited) << endl;
     size_t total = 2 * stats.totalLeavesVisited - stats.predictionError[0];
     for (size_t i = 1; i < stats.predictionError.size(); i++) {
         if (total < 1) break;
