@@ -2,8 +2,10 @@
 #include <cassert>
 #include <chrono> 
 #include <cstdio>
+#include <iostream>
 #include <math.h>
 #include <string>
+#include <sstream>
 #include <vector>
 #include "pi_tree.h"
 #include "full_scan.h"
@@ -113,6 +115,7 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
         r.resultSetSize.push_back(t.rangeQuery(*it, *it2).size());
     }
     r.queryTime = chrono::steady_clock::now() - start;
+    t.printQueryStats();
     return r;
 }
 
@@ -159,8 +162,8 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
     auto b = loadData<2>(numData, numQueries, distribution);
     printBenchmarkInformation(b);
     auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
-    printResults(piTreeResults, b);
     auto fullScanResults = benchmarkFullScan(b);
+    printResults(piTreeResults, b);
     printResults(fullScanResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
