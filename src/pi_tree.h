@@ -451,28 +451,28 @@ void PiTree<D,V>::printTreeStats() {
 
     for(auto it = s.fanoutOfInternal.begin(); it != s.fanoutOfInternal.end(); it++) {
         size_t idx = floor((double)*it / (double)maxFanout * nFanoutBuckets);
-        if(idx == nFanoutBuckets) {
+        if (idx == nFanoutBuckets) {
             idx = nFanoutBuckets - 1;
         }
         fanoutBuckets[idx]++;
     }
 
     cout << "PiTree Statistics:" << endl;
-    cout << "  - maxFanout: " << maxFanout << endl;
-    cout << "  - pageSize: " << pageSize << endl;
-    cout << "  - # nodes:  " << s.numInternal + s.numLeaves << endl;
-    cout << "  - # leaves: " << s.numLeaves << endl;
-    cout << "  - # internal: " << s.numInternal << endl;
-    cout << "  - depth stats:" << endl;
+    cout << "  - Max Fanout   : " << maxFanout << endl;
+    cout << "  - Page Size    : " << pageSize << endl;
+    cout << "  - Num Nodes    :  " << s.numInternal + s.numLeaves << endl;
+    cout << "  - Num Leaves   : " << s.numLeaves << endl;
+    cout << "  - Num Internal : " << s.numInternal << endl;
+    cout << "  - Depth Stats  :" << endl;
     for(size_t i = s.minDepthOfLeaf; i <= s.maxDepthOfLeaf; i++) {
         cout << "    * Leaves at depth " << i << ": " << depth[i] << endl;
     }
-    cout << "  - fanout stats:" << endl;
+    cout << "  - Fanout Stats:" << endl;
     for(size_t i = 0; i < nFanoutBuckets; i++) {
         cout << "    * [" << i * maxFanout / nFanoutBuckets << ", " << (i+1) * maxFanout / nFanoutBuckets << "): " << fanoutBuckets[i] << endl;
     }
 
-    cout << "  - leaf range stats:" << endl;
+    cout << "  - Leaf Range Stats:" << endl;
     for(size_t i = 0; i < nRangeBuckets; i++) {
         cout << "    * [" << i * pageSize / nRangeBuckets << ", " << (i+1) * pageSize / nRangeBuckets << "): " << rangeBuckets[i] << endl;
     }
@@ -504,6 +504,9 @@ void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,
 template <uint D, typename V>
 void PiTree<D,V>::printQueryStats() {
 
+    if (!STATS) return;
+    if (stats.totalQueries < 1) return;
+
     sort(stats.queryLatency.begin(), stats.queryLatency.end()); // sort to get the percentiles
     auto avgLatency = accumulate(stats.queryLatency.begin(), stats.queryLatency.end(), microseconds(0)).count() / stats.totalQueries;
     auto avgScanLatency = accumulate(stats.scanLatency.begin(), stats.scanLatency.end(), microseconds(0)).count() / stats.totalQueries;
@@ -528,13 +531,14 @@ void PiTree<D,V>::printQueryStats() {
     cout << "  - Avg Traverse Latency       : " << avgTraverseLatency << "μs" << endl;
     cout << "  - Prediction Error Stats     : " << endl;
     // 2x since each leaf visited has two predictions - start and end.
-    cout << "    * [0, 0]: " << (double)stats.predictionError[0] / (2 * stats.totalLeavesVisited) << endl;
+    cout << "    * [0, 0]: " << (double)stats.predictionError[0] / (2 * stats.totalLeavesVisited) * 100 << "%" << endl;
     size_t total = 2 * stats.totalLeavesVisited - stats.predictionError[0];
     for (size_t i = 1; i < stats.predictionError.size(); i++) {
         if (total < 1) break;
         total -= stats.predictionError[i];
         int start = pow(i - 1, 2);
         int end = pow(i, 2);
-        cout << "    * [" << start << ", " << end << "): " << (double)stats.predictionError[i] / (2 * stats.totalLeavesVisited) << endl;
+        cout << "    * [" << start << ", " << end << "): " << (double)stats.predictionError[i] / (2 * stats.totalLeavesVisited) * 100 << "%" << endl;
     }
+    cout << endl;
 }
