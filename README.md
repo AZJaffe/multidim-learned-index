@@ -2,6 +2,7 @@
 
 ## Dependencies
 1.  boost: Ubuntu install `sudo apt-get install libboost-all-dev`
+2.  libspatialindex: I haven't installed this on ubuntu, only MacOS. It contains the RTree implementation.
 
 ## Datasets
 1.  Random: uniform random distribution, random query ranges
