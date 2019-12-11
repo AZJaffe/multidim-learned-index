@@ -9,6 +9,7 @@
 #include <vector>
 #include "pi_tree.h"
 #include "full_scan.h"
+#include "r_tree.h"
 #include "util.h"
 
 using namespace std;
@@ -135,6 +136,23 @@ results benchmarkFullScan(benchmark<D> & b) {
     return r;
 }
 
+template <uint D>
+results benchmarkRTree(benchmark<D> & b) {
+    results r;
+    r.name = "R*-Tree";
+    auto start = chrono::steady_clock::now();
+    RTree<D,int> rt = RTree<D, int>(b.data);
+    cout << "RTree finished building" << endl;
+    r.loadTime = chrono::steady_clock::now() - start;
+    start = chrono::steady_clock::now();
+    auto it2 = b.max.begin();
+    for (auto it = b.min.begin(); it != b.min.end(); it++, it2++) {
+        r.resultSetSize.push_back(rt.rangeQuery(*it, *it2));
+    }
+    r.queryTime = chrono::steady_clock::now() - start;
+    return r;
+}
+
 template<uint D>
 void printResults(results &r, benchmark<D> & b) {
     int64_t loadTime = chrono::duration_cast<chrono::milliseconds>(r.loadTime).count();
@@ -160,18 +178,23 @@ void printBenchmarkInformation(benchmark<D> &b) {
 
 void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout, uint pageSize) {
     auto b = loadData<2>(numData, numQueries, distribution);
+    // auto b = uniformRandomDataset<2>(numData, numQueries, 0.1);
     printBenchmarkInformation(b);
     auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
     auto fullScanResults = benchmarkFullScan(b);
+    auto RTreeResults = benchmarkRTree(b);
     printResults(piTreeResults, b);
-    printResults(fullScanResults, b);
+    printResults(RTreeResults, b); 
+    // printResults(fullScanResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
+        assert(fullScanResults.resultSetSize[i] == RTreeResults.resultSetSize[i]);
     }
 }
 
 int main(void) {
-    evaluate("random", 1e6, 1e3, 1e3, 5e2);
-    evaluate("normal", 1e6, 1e3, 1e4, 5e3);
-    evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
+    // TODO parse parameters to decide what benchmarks to run and what indices to use
+    evaluate("random", 1e4, 1e3, 1e3, 5e2);
+    // evaluate("normal", 1e6, 1e3, 1e4, 5e3);
+    // evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
