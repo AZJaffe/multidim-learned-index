@@ -16,6 +16,7 @@ public:
     RTree(vector<datum> & data) {
         SpatialIndex::IStorageManager * memStore = SpatialIndex::StorageManager::createNewMemoryStorageManager();
         SpatialIndex::id_type id = 0;
+        // TODO - use createAndBulkLoadNewRTree instead.
         t = SpatialIndex::RTree::createNewRTree(
             *memStore,
             0.5, // fill factor
