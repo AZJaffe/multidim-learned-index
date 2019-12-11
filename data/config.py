@@ -12,8 +12,10 @@ class Distribution(Enum):
 
     RANDOM = 0
     NORMAL = 1
+    MIX = 2
     
 parseDistribution = {
     Distribution.RANDOM : "random",
     Distribution.NORMAL : "normal",
+    Distribution.MIX : "mix-Gauss",
 }

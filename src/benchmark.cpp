@@ -9,6 +9,7 @@
 #include <vector>
 #include "pi_tree.h"
 #include "full_scan.h"
+#include "util.h"
 
 using namespace std;
 
@@ -59,6 +60,42 @@ benchmark<D> uniformRandomDataset(size_t numData, size_t numQueries, double sele
     return b;
 }
 
+template <uint D>
+benchmark<D> loadData(size_t numData, size_t numQueries, string distribution) {
+    auto data = vector<pair<array<double, D>, int>>(numData);
+    benchmark<D> b = {
+        vector<pair<array<double, D>, int>>(numData),
+        vector<array<double, D>>(numQueries),
+        vector<array<double, D>>(numQueries),
+        -1, // loaded data use random selectivity, this is a dummy entry
+        to_string(D) + "D-" + distribution
+    };
+    string dataFile = "../data/" + b.name + "/points.csv";
+    CSVReader readerD(dataFile);
+    vector<vector<string>> dataList = readerD.getData();
+    for (uint i = 0; i < numData; ++i) {
+        array<double, D> k;
+        for (uint j = 0; j < D; ++j) {
+            k[j] = stod(dataList[i][j]);
+        }
+        auto p = make_pair(k, i);
+        b.data[i] = p;
+    }
+    string queryFile = "../data/" + b.name +  "/queries.csv";
+    CSVReader readerQ(queryFile);
+    vector<vector<string>> queryList = readerQ.getData();
+    for (uint i = 0; i < numQueries; ++i) {
+        array<double, D> minQ;
+        array<double, D> maxQ;
+        for (uint j = 0; j < D; ++j) {
+            minQ[j] = stod(queryList[i][2 * j]);
+            maxQ[j] = stod(queryList[i][2 * j + 1]);
+        }
+        b.min[i] = minQ;
+        b.max[i] = maxQ;
+    }
+    return b;
+}
 
 template <uint D>
 results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
@@ -121,14 +158,20 @@ void printBenchmarkInformation(benchmark<D> &b) {
     cout << endl;
 }
 
-int main(void) {
-    auto b = uniformRandomDataset<2>(1e6, 1e2, 0.5); // TODO make the parameters arguments
-    auto piTreeResults = benchmarkPiTree(b, 1e3, 5e2);
+void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout, uint pageSize) {
+    auto b = loadData<2>(numData, numQueries, distribution);
+    printBenchmarkInformation(b);
+    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
     auto fullScanResults = benchmarkFullScan(b);
+    printResults(piTreeResults, b);
+    printResults(fullScanResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
     }
-    printBenchmarkInformation(b);
-    printResults(piTreeResults, b);
-    printResults(fullScanResults, b);
+}
+
+int main(void) {
+    evaluate("random", 1e6, 1e3, 1e3, 5e2);
+    evaluate("normal", 1e6, 1e3, 1e4, 5e3);
+    evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
