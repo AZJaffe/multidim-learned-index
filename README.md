@@ -2,7 +2,11 @@
 
 ## Dependencies
 1.  boost: Ubuntu install `sudo apt-get install libboost-all-dev`
-2.  libspatialindex: I haven't installed this on ubuntu, only MacOS. It contains the RTree implementation.
+2.  libspatialindex: this library should be installed easily on MacOS. If you are running on Ubuntu, try following steps.
+    1.  Download the source code from libspatialindex github
+    2.  Run `cmake .`, `make`, `sudo make install` (By default this should install to path `/usr/local`)
+    3.  During compile, link `/usr/local/lib/libspatialindex.so` manually
+    4.  If you can compile but cannot execute, try `sudo ldconfig`
 
 ## Datasets
 1.  Random: uniform random distribution, random query ranges
