@@ -200,32 +200,23 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
     // auto b = uniformRandomDataset<2>(numData, numQueries, 0.1);
     printBenchmarkInformation(b);
     auto fullScanResults = benchmarkFullScan(b);
-    auto kdTreeResults = benchmarkKDTree(b);
+    // auto kdTreeResults = benchmarkKDTree(b);
     auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
     // auto RTreeResults = benchmarkRTree(b);
     printResults(fullScanResults, b);
-    printResults(kdTreeResults, b);
+    // printResults(kdTreeResults, b);
     printResults(piTreeResults, b);
-<<<<<<< HEAD
-    printResults(RTreeResults, b); 
-    printResults(fullScanResults, b);
-=======
     // printResults(RTreeResults, b); 
->>>>>>> 830707c29e49d2a6c1f1372be30b887234904a33
+    printResults(fullScanResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
-        assert(fullScanResults.resultSetSize[i] == kdTreeResults.resultSetSize[i]);
+        // assert(fullScanResults.resultSetSize[i] == kdTreeResults.resultSetSize[i]);
         // assert(fullScanResults.resultSetSize[i] == RTreeResults.resultSetSize[i]);
     }
 }
 
 int main(void) {
-    evaluate("random", 1e6, 1e3, 1e3, 5e3);
-    // TODO parse parameters to decide what benchmarks to run and what indices to use
-<<<<<<< HEAD
-    evaluate("random", 1e6, 1e3, 1e3, 5e2);
-=======
->>>>>>> 830707c29e49d2a6c1f1372be30b887234904a33
-    // evaluate("normal", 1e6, 1e3, 1e4, 5e3);
+    // evaluate("random", 1e6, 1e3, 1e3, 5e3);
+     evaluate("normal", 1e6, 1e3, 1e3, 5e2);
     // evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
