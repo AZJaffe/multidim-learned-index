@@ -7,6 +7,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include "kd_tree.h"
 #include "pi_tree.h"
 #include "full_scan.h"
 #include "r_tree.h"
@@ -108,7 +109,7 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
     PiTree<D,int> t = PiTree<D, int>(b.data, maxFanout, pageSize);
     r.loadTime = chrono::steady_clock::now() - start;
 
-    // t.printTreeStats();
+    t.printTreeStats();
 
     start = chrono::steady_clock::now();
     auto it2 = b.max.begin();
@@ -123,7 +124,7 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
 template <uint D>
 results benchmarkFullScan(benchmark<D> & b) {
     results r;
-    r.name = "Full Scan";
+    r.name = "FullScan";
     auto start = chrono::steady_clock::now();
     FullScan<D,int> f = FullScan<D, int>(b.data);
     r.loadTime = chrono::steady_clock::now() - start;
@@ -137,11 +138,28 @@ results benchmarkFullScan(benchmark<D> & b) {
 }
 
 template <uint D>
+results benchmarkKDTree(benchmark<D> & b) {
+    results r;
+    r.name = "KdTree";
+    auto start = chrono::steady_clock::now();
+    KdTree<D, int> t = KdTree<D, int>(b.data);
+    r.loadTime = chrono::steady_clock::now() - start;
+    auto it2 = b.max.begin();
+    start = chrono::steady_clock::now();
+    for (auto it = b.min.begin(); it != b.min.end(); it++, it2++) {
+        r.resultSetSize.push_back(t.rangeQuery(*it, *it2).size());
+    }
+    r.queryTime = chrono::steady_clock::now() - start;
+    return r;
+}
+
+template <uint D>
 results benchmarkRTree(benchmark<D> & b) {
     results r;
     r.name = "R*-Tree";
     auto start = chrono::steady_clock::now();
-    RTree<D,int> rt = RTree<D, int>(b.data);
+    // CustomRTree<D,int> rt = CustomRTree<D, int>(b.data);
+    CustomRTree<D,int> rt = CustomRTree<D,int>("../data/2D-random/points.csv");
     cout << "RTree finished building" << endl;
     r.loadTime = chrono::steady_clock::now() - start;
     start = chrono::steady_clock::now();
@@ -177,24 +195,37 @@ void printBenchmarkInformation(benchmark<D> &b) {
 }
 
 void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout, uint pageSize) {
+    cout << "==============================================" << endl;
     auto b = loadData<2>(numData, numQueries, distribution);
     // auto b = uniformRandomDataset<2>(numData, numQueries, 0.1);
     printBenchmarkInformation(b);
-    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
     auto fullScanResults = benchmarkFullScan(b);
-    auto RTreeResults = benchmarkRTree(b);
+    auto kdTreeResults = benchmarkKDTree(b);
+    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
+    // auto RTreeResults = benchmarkRTree(b);
+    printResults(fullScanResults, b);
+    printResults(kdTreeResults, b);
     printResults(piTreeResults, b);
+<<<<<<< HEAD
     printResults(RTreeResults, b); 
-    // printResults(fullScanResults, b);
+    printResults(fullScanResults, b);
+=======
+    // printResults(RTreeResults, b); 
+>>>>>>> 830707c29e49d2a6c1f1372be30b887234904a33
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
-        assert(fullScanResults.resultSetSize[i] == RTreeResults.resultSetSize[i]);
+        assert(fullScanResults.resultSetSize[i] == kdTreeResults.resultSetSize[i]);
+        // assert(fullScanResults.resultSetSize[i] == RTreeResults.resultSetSize[i]);
     }
 }
 
 int main(void) {
+    evaluate("random", 1e6, 1e3, 1e3, 5e3);
     // TODO parse parameters to decide what benchmarks to run and what indices to use
-    evaluate("random", 1e4, 1e3, 1e3, 5e2);
+<<<<<<< HEAD
+    evaluate("random", 1e6, 1e3, 1e3, 5e2);
+=======
+>>>>>>> 830707c29e49d2a6c1f1372be30b887234904a33
     // evaluate("normal", 1e6, 1e3, 1e4, 5e3);
     // evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
