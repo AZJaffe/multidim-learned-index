@@ -27,7 +27,6 @@ public:
             id // id (not sure why this is needed)
         ); // TODO - tune parameters?
         for(auto it = data.begin(); it != data.end(); it++) {
-            cout << "Adding data point: " << it - data.begin() << endl;
             SpatialIndex::id_type id = 0;
             t->insertData(
                 0, nullptr, // Don't insert data, just the point
