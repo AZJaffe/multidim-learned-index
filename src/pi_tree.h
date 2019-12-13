@@ -59,9 +59,9 @@ class PiTree {
         double project(array<double, D> &d) {
             return inner_product(d.begin(), d.end(), proj.begin(), 0.0);
         };
-        uint getChildIndex(double d) {
+        size_t getChildIndex(double d) {
             int prediction = floor(model.predict(d) * fanout);
-            return min(fanout - 1, (uint)max(0, prediction));
+            return min(children.size() - 1, (size_t)max(0, prediction));
         };
         uint getIndex(double d) {
             uint prediction = floor(model.predict(d) * (end - start)) + start;
@@ -225,9 +225,13 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
             n->project(data[i].first)
         );
         while (p >= childMaxVal) {
-            n->children.push_back(
-                buildSubTree(childStart, i, depth+1)
-            );
+            if (i - childStart > 0) {
+                n->children.push_back(
+                    buildSubTree(childStart, i, depth+1)
+                );
+            } else {
+                n->children.push_back(nullptr);
+            }
             childStart = i;
             if (n->children.size() == n->fanout - 1) {
                 childMaxVal = numeric_limits<double>::max();
@@ -309,8 +313,9 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         uint minChildIndex = n->getChildIndex(minProjection);
         uint maxChildIndex = n->getChildIndex(maxProjection);
 
-        for(uint i = minChildIndex; i <= maxChildIndex && i < n->children.size(); i++) {
-            rangeQuery(ret, min, max, n->children[i], refine, scan);
+        for(auto it = n->children.begin() + minChildIndex; it <= n->children.begin() + maxChildIndex; it++) {
+            if (*it == nullptr) continue;
+            rangeQuery(ret, min, max, *it, refine, scan);
         }
         return;
     }
@@ -341,7 +346,7 @@ typename PiTree<D,V>::datum * PiTree<D,V>::lookup(array<double, D> query, node *
     }
     double projQuery = n->project(query);
     uint childIndex = n->getChildIndex(projQuery);
-    if(childIndex < n->children.size()) {
+    if(childIndex < n->children.size() && n->children[childIndex] != nullptr) {
         return lookup(query, n->children[childIndex]);
     } else {
         return nullptr;
@@ -499,6 +504,7 @@ void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,
         s.numInternal++;
         s.fanoutOfInternal.push_back(n->fanout);
         for(auto it = n->children.begin(); it != n->children.end(); it++) {
+            if(*it == nullptr) continue;
             collectStructureData(s, *it, depth + 1);
         }
     }
