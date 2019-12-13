@@ -141,7 +141,8 @@ results benchmarkRTree(benchmark<D> & b) {
     results r;
     r.name = "R*-Tree";
     auto start = chrono::steady_clock::now();
-    RTree<D,int> rt = RTree<D, int>(b.data);
+    // CustomRTree<D,int> rt = CustomRTree<D, int>(b.data);
+    CustomRTree<D,int> rt = CustomRTree<D,int>("../data/2D-random/points.csv");
     cout << "RTree finished building" << endl;
     r.loadTime = chrono::steady_clock::now() - start;
     start = chrono::steady_clock::now();
@@ -185,7 +186,7 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
     auto RTreeResults = benchmarkRTree(b);
     printResults(piTreeResults, b);
     printResults(RTreeResults, b); 
-    // printResults(fullScanResults, b);
+    printResults(fullScanResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
         assert(fullScanResults.resultSetSize[i] == RTreeResults.resultSetSize[i]);
@@ -194,7 +195,7 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
 
 int main(void) {
     // TODO parse parameters to decide what benchmarks to run and what indices to use
-    evaluate("random", 1e4, 1e3, 1e3, 5e2);
+    evaluate("random", 1e6, 1e3, 1e3, 5e2);
     // evaluate("normal", 1e6, 1e3, 1e4, 5e3);
     // evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
