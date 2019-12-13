@@ -2,7 +2,7 @@ CXX      := -g++
 CXXFLAGS := -g --std=c++17 -pedantic-errors -Wall -Wextra -Werror -O3
 # This works on MacOS, I haven't tried on Linux. Please fix if it doesnt build on Linux.
 # On Mac $(uname) returns 'Darwin', so use that if its different on Linux
-CXXFLAGS += -lspatialindex 
+CXXFLAGS += -lspatialindex
 BUILD_DIR := ./build
 TEST_DIR := $(BUILD_DIR)/test
 
