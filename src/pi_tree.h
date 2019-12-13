@@ -97,7 +97,7 @@ class PiTree {
         vector<microseconds> scanLatency;
         vector<microseconds> refineLatency;
         vector<microseconds> traverseLatency;
-        queryStatistics() : totalQueries(0), totalHit(0), totalMiss(0), totalLeafSizes(0) {
+        queryStatistics() : totalQueries(0), totalHit(0), totalMiss(0), totalLeafSizes(0), totalInternalVisited(0), totalLeavesVisited(0) {
             for(auto it = predictionError.begin(); it != predictionError.end(); it++) {
                 *it = 0;
             }
@@ -460,7 +460,7 @@ void PiTree<D,V>::printTreeStats() {
     cout << "PiTree Statistics:" << endl;
     cout << "  - Max Fanout   : " << maxFanout << endl;
     cout << "  - Page Size    : " << pageSize << endl;
-    cout << "  - Num Nodes    :  " << s.numInternal + s.numLeaves << endl;
+    cout << "  - Num Nodes    : " << s.numInternal + s.numLeaves << endl;
     cout << "  - Num Leaves   : " << s.numLeaves << endl;
     cout << "  - Num Internal : " << s.numInternal << endl;
     cout << "  - Depth Stats  :" << endl;
@@ -469,12 +469,16 @@ void PiTree<D,V>::printTreeStats() {
     }
     cout << "  - Fanout Stats:" << endl;
     for(size_t i = 0; i < nFanoutBuckets; i++) {
-        cout << "    * [" << i * maxFanout / nFanoutBuckets << ", " << (i+1) * maxFanout / nFanoutBuckets << "): " << fanoutBuckets[i] << endl;
+        if (fanoutBuckets[i] != 0) {
+            cout << "    * [" << i * maxFanout / nFanoutBuckets << ", " << (i+1) * maxFanout / nFanoutBuckets << "): " << fanoutBuckets[i] << endl;
+        }
     }
 
     cout << "  - Leaf Range Stats:" << endl;
     for(size_t i = 0; i < nRangeBuckets; i++) {
-        cout << "    * [" << i * pageSize / nRangeBuckets << ", " << (i+1) * pageSize / nRangeBuckets << "): " << rangeBuckets[i] << endl;
+        if (rangeBuckets[i] != 0) {
+            cout << "    * [" << i * pageSize / nRangeBuckets << ", " << (i+1) * pageSize / nRangeBuckets << "): " << rangeBuckets[i] << endl;
+        }
     }
 
     delete[] depth;
