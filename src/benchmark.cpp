@@ -5,10 +5,10 @@
 #include <math.h>
 #include <string>
 #include <vector>
+#include "kd_tree.h"
 #include "pi_tree.h"
 #include "full_scan.h"
 #include "util.h"
-#include "kd-tree/kd_tree.h"
 
 using namespace std;
 
@@ -120,7 +120,7 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
 template <uint D>
 results benchmarkFullScan(benchmark<D> & b) {
     results r;
-    r.name = "Full Scan";
+    r.name = "FullScan";
     auto start = chrono::steady_clock::now();
     FullScan<D,int> f = FullScan<D, int>(b.data);
     r.loadTime = chrono::steady_clock::now() - start;
@@ -135,33 +135,15 @@ results benchmarkFullScan(benchmark<D> & b) {
 
 template <uint D>
 results benchmarkKDTree(benchmark<D> & b) {
-    // reformat points and queries to kd-tree input format
-    if (D != 2) {
-        cout << "This kd-tree only supports 2D data" << endl;
-        assert(1==0);
-    }
-    uint numData = b.data.size();
-    uint numQueries = b.min.size();
-    PointType<double> *points; 
-    points = new PointType<double>[numData];
-    for (uint i = 0; i < numData; ++i) {
-        points[i].x = (b.data[i].first)[0];
-        points[i].y = b.data[i].first[1]; 
-    }
-    vector<region<double>> queries(numQueries);
-    for (uint i = 0; i < numQueries; ++i) {
-        queries[i] = region<double>(b.min[i][0], b.max[i][0], b.min[i][1], b.max[i][1]);
-    }
-    
-    KD_Tree<double> t;
     results r;
-    r.name = "KD-Tree";
+    r.name = "KdTree";
     auto start = chrono::steady_clock::now();
-    t.buildKD_Tree(points, numData);
+    KdTree<D, int> t = KdTree<D, int>(b.data);
     r.loadTime = chrono::steady_clock::now() - start;
+    auto it2 = b.max.begin();
     start = chrono::steady_clock::now();
-    for (uint i = 0; i < numQueries; ++i) {
-        r.resultSetSize.push_back(t.searchKD_Tree(queries[i]));
+    for (auto it = b.min.begin(); it != b.min.end(); it++, it2++) {
+        r.resultSetSize.push_back(t.rangeQuery(*it, *it2).size());
     }
     r.queryTime = chrono::steady_clock::now() - start;
     return r;
@@ -195,10 +177,10 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
     auto b = loadData<2>(numData, numQueries, distribution);
     printBenchmarkInformation(b);
     auto fullScanResults = benchmarkFullScan(b);
-    printResults(fullScanResults, b);
     auto kdTreeResults = benchmarkKDTree(b);
-    printResults(kdTreeResults, b);
     auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
+    printResults(fullScanResults, b);
+    printResults(kdTreeResults, b);
     printResults(piTreeResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
@@ -208,6 +190,6 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
 
 int main(void) {
     evaluate("random", 1e6, 1e3, 1e3, 5e2);
-    evaluate("normal", 1e6, 1e3, 1e4, 5e3);
-    evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
+    // evaluate("normal", 1e6, 1e3, 1e4, 5e3);
+    // evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
