@@ -120,27 +120,70 @@ A complication of this approach is that points that are close in
 n-dimensional space are not necessarily close together on the curve. % TODO Cite this
 Tree-based structures can be though of as the multidimensional extension of B-Trees.
 There are a variety methods that take this approach, such as R-Trees, kd-trees. % TODO Cite
-Bucketing coarsely partitions the data space into buckets, which are then scanned and filtered
+Bucketing coarsely partitions the data space, which are then scanned and filtered to produce
+the result set.
 % TODO cite VA-file, grid file, locality sensitive hashing
 
-The recent work by Kraska et al. on learned indices
+In this paper we present PiTree, a learned multidimensional index designed for
+in-memory multidimensional range queries. PiTree extends in a natural way the recursive model index (RMI) strucutre
+ideas from the original learned index paper to a multidimensional space.
+Our main contributions are:
+\begin{enumerate}
+  \item The design and implementation from scratch of the PiTree multidimensaional learned index in C++
+  % TODO highlight benchmark results
+  \item A thorough evaluation of PiTree against an R*-Tree and kd-Tree 
+  \item A discussion of future work to improve the performance of PiTree
+\end{enumerate}
+
+The rest of this report will be structured as follows. % TODO
+
+\section{Background}
+
+\subsection{Recursive Model Index}
+
+The recent work by Kraska et al. on learned indexes
 has cast the problem of single dimensional indexing in a new light \cite{Learned_Index}.
 Their key insight is that given the empirical cumulative distribution function
 of the dataset, in most cases, a very compact index can be constructed. 
-They showed such an index can take orders of magnitude less memory
-than a classic B-tree.
-This pioneering work has inspired more research into leveraging machine learning 
-to efficiently index data, including a very recent work, Flood, for the multidimensional 
-case. \cite{ALEX,FITing-Tree,PGM,Flood}. % TODO Cite PGM-Index, Flood
+The index structure they proposed is called the recursive model index (RMI) and they
+demonstrated that it can take orders of magnitude less memory
+than a classic B-tree while simultaneously providing similar throughput.
 
+There are two key ideas behind RMI that made it so successful.
+First is that overfitting is not an issue, unlike almost all other machine learning 
+applications. In a non-dynamic indexing setting, the model does not need to have extrapolative
+power and more simple models can be used.
+Second is that one large model for the CDF is impractical due to the latency in evaluation
+and size, and that a more fruitful approach is to 
+use a hierarchy of models. The root model and internal models are used to route
+to more specific models, which are trained on smaller sections of the dataset. 
+Many different types of models have been used in the hierarchy, including neural nets,
+but researches have determined that linear models perform the best due
+to their small size and very quick inference time. % CITE learned index blog/argument, ALEX, etc.
+Linear models can be simply be comprised of two floats $a$ and $b$ and inference
+can be done with one multiplication, one addition, and an application of floor:
+$y = \lfloor ax + b \rfloor$.
 
+The leaf models in RMI are used to predict the location of the key in a sorted 
+in-memory array. The prediction could be wrong, so a local search around the prediction
+is required to find the key, if it exists. In order to speed up the searches,
+a max error is maintained to be used for the bounds of the local search.
 
+% TODO diagram for RMI
 
-\section{Related Work}
+\section{Single Dimensional Case}
 
-\section{PiTree Overview}
+% Xiyeng TODO
+
+\section{PiTree Design}
+
+\subsection{Tree Structure}
+
+\subsection{Refinement}
 
 \section{Benchmarks}
+
+\section{Related Work}
 
 \section{Future Work}
 
@@ -153,8 +196,6 @@ case. \cite{ALEX,FITing-Tree,PGM,Flood}. % TODO Cite PGM-Index, Flood
 \begin{acks}
 I'd like to thank my girlfriend Akshaya for always helping me when I need it.
 \end{acks}
-
-\newpage
 
 %%
 %% The next two lines define the bibliography style to be used, and
