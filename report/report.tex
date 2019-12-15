@@ -25,6 +25,10 @@
 \documentclass[sigconf,10pt]{acmart}
 
 \usepackage{amsmath}
+\usepackage{algorithm2e}
+
+\SetKwRepeat{Struct}{struct \{}{\}}%
+\newcommand{\Float}{\KwSty{float}}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -37,10 +41,10 @@
 %% values in them; it is your responsibility as an author to replace
 %% the commands and values with those provided to you when you
 %% complete the rights form.
-\setcopyright{acmcopyright}
-\copyrightyear{2019}
-\acmYear{2019}
-\acmDOI{10.1145/1122445.1122456}
+% \setcopyright{acmcopyright}
+% \copyrightyear{2019}
+% \acmYear{2019}
+% \acmDOI{10.1145/1122445.1122456}
 
 %%
 %% Submission ID.
@@ -183,13 +187,43 @@ endpoint.
 
 \section{PiTree Design}
 
-PiTree is a multidimensional in-memory learned tree index structure.
-The data is stored as one in-memory array.
-Each node is responsible for indexing a range of the data array in $[start, end)$.
-Nodes contain a projection vector $proj$ of the same dimension of the data
+PiTree is a multidimensional in-memory learned tree index structure for
+mutlidimensional range queries.
+PiTree indexes a static dataset and does not support dynamic inserts, deletes,
+although we believe it is possible to extend PiTree to allow dynamic inserts and deletes,
+in the same way ALEX built upon the original RMI structure to achieve this functionality. % CITE ALEX
+
+The datapoints, all of dimension $D$, are stored as one contiguous in-memory array.
+Nodes in PiTree are comprised of a projection onto a single dimension, which it uses to
+sort data points, and a linear regression model which models the CDF of a segment of the data.
+Internal nodes use the linear model to select a child node to route to.
+Leaf nodes use the linear model to find the relevant data point. 
+PiTree is configurable with two parameters: the $pageSize$, 
+which bounds the number of data points
+a leaf node indexes, as well as $maxFanout$, which bounds the fanout
+of an internal node.
+
+\subsection{Node Structure}
+
+\begin{algorithm}[t]
+  \SetAlgoNoLine\PrintSemicolon
+  \Struct{Node}{
+    \KwSty{int} start,end\; 
+    \KwSty{int} fanout\;
+    \KwSty{Node *} children[]\;
+    \KwSty{double} proj[]\;
+    \KwSty{LinearModel} model\;
+  }
+  \caption{PiTree Node Strucutre}
+  \label{PiTreeNode}
+\end{algorithm}
+
+
+Each node $n$ is responsible for indexing the range of the data array with indexes in $[start_n, end_n)$.
+Nodes contain a projection vector $proj_n$ of the same dimension of the data
 which it uses to sort the range of data it indexes. 
 To be precise, if $d_1, d_2$ are two datapoints, the node will 
-sort $d_1$ before $d_2$ if $d_1 \cdot proj < d_2 \cdot proj$.
+sort $d_1$ before $d_2$ if $d_1 \cdot proj_n < d_2 \cdot proj$.
 PiTree uses a policy to select a projection on a per-node basis. In this report,
 we only tested a policy which chooses a dimension to project onto in a round-robin
 fashion, similar to how a kd-tree selects which dimension to split at each depth.
@@ -205,6 +239,22 @@ tested and implemented this round-robin policy because of time constraints,
 we think there is potential
 for more sophisticated policies and believe this to be a fruitful avenue of further
 research.
+
+Along with a projection, each node has a linear regression model 
+to approximate the CDF of the data it indexes. If a node $n$ indexes data points
+$data[start_n], data[start_n + 1], \cdots, data[end_n - 1]$ and has projection $proj_n$,
+then for a number $k$, the
+model approximates
+\[ 
+  \frac{|\{i \in [start_n, end_n) : data[i] \cdot proj_n < k\}|}{end - start},
+\]
+
+the portion of datapoints in the range that have a 
+smaller projection than $k$.
+
+The fanout for an internal node is $(end - start) / pageSize$, up to a maximum determined
+by the parameter $maxFanout$. Internal nodes use the fanout along with the linear model
+to determine which child node to route to. 
 
 \subsection{Constructing The Tree}
 
