@@ -24,6 +24,8 @@
 %% The first command in your LaTeX source must be the \documentclass command.
 \documentclass[sigconf,10pt]{acmart}
 
+\usepackage{amsmath}
+
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
 \AtBeginDocument{%
@@ -39,7 +41,6 @@
 \copyrightyear{2019}
 \acmYear{2019}
 \acmDOI{10.1145/1122445.1122456}
-
 
 %%
 %% Submission ID.
@@ -84,6 +85,7 @@
 \begin{abstract}
   This is my abstract, so it is not concrete yet. It cannot yet be used
   in the constructions of domiciles for human habitation.
+  % TODO
 \end{abstract}
 
 
@@ -125,7 +127,8 @@ the result set.
 % TODO cite VA-file, grid file, locality sensitive hashing
 
 In this paper we present PiTree, a learned multidimensional index designed for
-in-memory multidimensional range queries. PiTree extends in a natural way the recursive model index (RMI) strucutre
+in-memory multidimensional range queries capable of indexing
+data of arbitrary dimension. PiTree extends in a natural way the recursive model index (RMI) strucutre
 ideas from the original learned index paper to a multidimensional space.
 Our main contributions are:
 \begin{enumerate}
@@ -151,16 +154,16 @@ than a classic B-tree while simultaneously providing similar throughput.
 
 There are two key ideas behind RMI that made it so successful.
 First is that overfitting is not an issue, unlike almost all other machine learning 
-applications. In a non-dynamic indexing setting, the model does not need to have extrapolative
-power and more simple models can be used.
-Second is that one large model for the CDF is impractical due to the latency in evaluation
-and size, and that a more fruitful approach is to 
+applications. In a non-dynamic indexing setting, the model does not need extrapolative
+power, allowing more simple models to be used.
+Second is that one complex model for the CDF is impractical due to large inference times
+and memory size, and that a more fruitful approach is to 
 use a hierarchy of models. The root model and internal models are used to route
-to more specific models, which are trained on smaller sections of the dataset. 
-Many different types of models have been used in the hierarchy, including neural nets,
-but researches have determined that linear models perform the best due
-to their small size and very quick inference time. % CITE learned index blog/argument, ALEX, etc.
-Linear models can be simply be comprised of two floats $a$ and $b$ and inference
+to more specific models, which are trained on smaller segments of the dataset. 
+Researches have tried different types of models in the hierarchy, including neural nets,
+but the consensus seems to be that linear models perform the best due
+to their small memory footprint and very quick inference time. % CITE learned index blog/argument, ALEX, etc.
+Linear models are simply comprised of two floats $a$ and $b$ and inference
 can be done with one multiplication, one addition, and an application of floor:
 $y = \lfloor ax + b \rfloor$.
 
@@ -168,6 +171,9 @@ The leaf models in RMI are used to predict the location of the key in a sorted
 in-memory array. The prediction could be wrong, so a local search around the prediction
 is required to find the key, if it exists. In order to speed up the searches,
 a max error is maintained to be used for the bounds of the local search.
+Since RMI is a clustered index, it is capable of performing single dimensional range searches
+by simply finding the left endpoint range, then scanning to the right until reaching the right
+endpoint.
 
 % TODO diagram for RMI
 
@@ -209,9 +215,32 @@ machine learning modules such as tensorflow.
 
 \section{PiTree Design}
 
-\subsection{Tree Structure}
+PiTree is a multidimensional in-memory learned tree index structure.
+The data is stored as one in-memory array.
+Each node is responsible for indexing a range of the data array in $[start, end)$.
+Nodes contain a projection vector $proj$ of the same dimension of the data
+which it uses to sort the range of data it indexes. 
+To be precise, if $d_1, d_2$ are two datapoints, the node will 
+sort $d_1$ before $d_2$ if $d_1 \cdot proj < d_2 \cdot proj$.
+PiTree uses a policy to select a projection on a per-node basis. In this report,
+we only tested a policy which chooses a dimension to project onto in a round-robin
+fashion, similar to how a kd-tree selects which dimension to split at each depth.
+In particular, if a node is at depth $h$, then its
+$D$ dimensional projection vector is the basis vector $e_{h \% D}$ that has components 
+$$a_j = \begin{cases} 
+  1 & j \equiv h \mod D \\
+  0 & otherwise
+\end{cases}
+$$
+for $j=1, \cdots, D$ and dimension $D$. Although for this report we only 
+tested and implemented this round-robin policy because of time constraints,
+we think there is potential
+for more sophisticated policies and believe this to be a fruitful avenue of further
+research.
 
-\subsection{Refinement}
+\subsection{Constructing The Tree}
+
+\subsection{Range Search}
 
 \section{Evaluation}
 
