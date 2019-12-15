@@ -20,6 +20,15 @@ class KdTree {
         node * left;
         node * right;
         node(datum & d) : d(d), left(nullptr), right(nullptr) {};
+        size_t memorySize() {
+            size_t s = sizeof(datum);
+            s += 2 * sizeof(node);
+            if (left != nullptr)
+                s += left->memorySize();
+            if (right != nullptr)
+                s += right->memorySize();
+            return s;
+        }
     };
 
     struct nodeCmp {
@@ -78,5 +87,11 @@ public:
         vector<datum> ret;
         rangeQuery(ret, min, max, root, 0);
         return ret;
+    }
+
+    size_t memorySize() {
+        size_t s = sizeof(KdTree<D,V>);
+        s += root->memorySize();
+        return s;
     }
 };
