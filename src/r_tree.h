@@ -44,17 +44,18 @@ public:
         double fillFactor = 0.5;
         size_t indexCapacity = 1000;
         size_t leafCapacity = 1000;
-        size_t dimension = 2;
+        size_t dimension = D;
         id_type indexIndentifier;
         PointDataStream dstream(fileName);
         t = SpatialIndex::RTree::createAndBulkLoadNewRTree(SpatialIndex::RTree::BLM_STR, dstream, *fileInMem,
         fillFactor, indexCapacity, leafCapacity, dimension, SpatialIndex::RTree::RV_RSTAR, indexIndentifier);
-        cout << "Bulk loading finish" << endl;
-        // cout << "Index ID: " << indexIndentifier << endl;
-        // bool ret = t->isIndexValid();
-        // if (!ret) cout << "Index is invalid" << endl;
-        // else cout << "Index seems OK" << endl;
     };
+
+    size_t memorySize() {
+        SpatialIndex::IStatistics *s;
+        t->getStatistics(&s); 
+        return s->getNumberOfNodes() * sizeof(SpatialIndex::INode) + s->getNumberOfData() * sizeof(SpatialIndex::IData);
+    }
 
     size_t rangeQuery(array<double, D> min, array<double, D> max) {
         auto r = SpatialIndex::Region(min.data(), max.data(), D);
