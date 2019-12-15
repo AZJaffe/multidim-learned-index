@@ -1,0 +1,960 @@
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.0001S-random
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.0001
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1001
+  - Num Leaves   : 1000
+  - Num Internal : 1
+  - Depth Stats  :
+    * Leaves at depth 2: 1000
+  - Fanout Stats:
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [500, 1000): 491
+    * [1000, 1500): 509
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 0.0109958%
+  - Avg Hit/Scanned            : 90.8465%
+  - Avg Leaves Searched/Query  : 10.994
+  - Avg Internal Visited/Query : 1
+  - Avg Refinement             : 1.00001%
+  - Median Latency             : 4μs
+  - 95th Percentile Latency    : 6μs
+  - 99th Percentile Latency    : 25μs
+  - 99.9th Percentile Latency  : 36μs
+  - Max Latency                : 36μs
+  - Avg Latency                : 4μs
+  - Avg Scan Latency           : 0μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 3μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 5.25741%
+    * [0, 1): 10.4921%
+    * [1, 4): 19.7244%
+    * [4, 9): 30.9396%
+    * [9, 16): 28.2563%
+    * [16, 25): 5.32563%
+    * [25, 36): 0.00454794%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 1721ms
+  - Total Time: 1721ms
+  - Time/Query: 1.721ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 233ms
+  - Query Time: 4ms
+  - Total Time: 237ms
+  - Time/Query: 0.004ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 2917ms
+  - Query Time: 205ms
+  - Total Time: 3122ms
+  - Time/Query: 0.205ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 135ms
+  - Query Time: 4ms
+  - Total Time: 139ms
+  - Time/Query: 0.004ms
+  - Memory usage: 78.4141KB
+
+Selectivity: 0.000100
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.0001S-normal
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.0001
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1161
+  - Num Leaves   : 1158
+  - Num Internal : 3
+  - Depth Stats  :
+    * Leaves at depth 2: 998
+    * Leaves at depth 3: 160
+  - Fanout Stats:
+    * [80, 90): 2
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 272
+    * [500, 1000): 412
+    * [1000, 1500): 470
+    * [1500, 2000): 4
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 0.012127%
+  - Avg Hit/Scanned            : 82.9216%
+  - Avg Leaves Searched/Query  : 10.962
+  - Avg Internal Visited/Query : 1.074
+  - Avg Refinement             : 1.16585%
+  - Median Latency             : 5μs
+  - 95th Percentile Latency    : 9μs
+  - 99th Percentile Latency    : 26μs
+  - 99.9th Percentile Latency  : 35μs
+  - Max Latency                : 35μs
+  - Avg Latency                : 5μs
+  - Avg Scan Latency           : 0μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 4μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 0.998905%
+    * [0, 1): 1.40485%
+    * [1, 4): 3.02864%
+    * [4, 9): 5.9615%
+    * [9, 16): 12.9265%
+    * [16, 25): 24.1881%
+    * [25, 36): 33.6024%
+    * [36, 49): 17.8207%
+    * [49, 64): 0.063857%
+    * [64, 81): 0.00456121%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 1609ms
+  - Total Time: 1609ms
+  - Time/Query: 1.609ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 228ms
+  - Query Time: 4ms
+  - Total Time: 232ms
+  - Time/Query: 0.004ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 2860ms
+  - Query Time: 219ms
+  - Total Time: 3079ms
+  - Time/Query: 0.219ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 142ms
+  - Query Time: 5ms
+  - Total Time: 147ms
+  - Time/Query: 0.005ms
+  - Memory usage: 91.6641KB
+
+Selectivity: 0.000101
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.001S-random
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.001
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1001
+  - Num Leaves   : 1000
+  - Num Internal : 1
+  - Depth Stats  :
+    * Leaves at depth 2: 1000
+  - Fanout Stats:
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [500, 1000): 493
+    * [1000, 1500): 507
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 0.103125%
+  - Avg Hit/Scanned            : 96.976%
+  - Avg Leaves Searched/Query  : 32.599
+  - Avg Internal Visited/Query : 1
+  - Avg Refinement             : 3.16313%
+  - Median Latency             : 17μs
+  - 95th Percentile Latency    : 32μs
+  - 99th Percentile Latency    : 66μs
+  - 99.9th Percentile Latency  : 106μs
+  - Max Latency                : 106μs
+  - Avg Latency                : 19μs
+  - Avg Scan Latency           : 0μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 17μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 5.07224%
+    * [0, 1): 10.2028%
+    * [1, 4): 19.1279%
+    * [4, 9): 31.5102%
+    * [9, 16): 28.6926%
+    * [16, 25): 5.3652%
+    * [25, 36): 0.029142%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 1726ms
+  - Total Time: 1726ms
+  - Time/Query: 1.726ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 233ms
+  - Query Time: 23ms
+  - Total Time: 256ms
+  - Time/Query: 0.023ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 2940ms
+  - Query Time: 560ms
+  - Total Time: 3500ms
+  - Time/Query: 0.56ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 135ms
+  - Query Time: 20ms
+  - Total Time: 155ms
+  - Time/Query: 0.02ms
+  - Memory usage: 78.4141KB
+
+Selectivity: 0.001000
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.001S-normal
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.001
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1161
+  - Num Leaves   : 1158
+  - Num Internal : 3
+  - Depth Stats  :
+    * Leaves at depth 2: 998
+    * Leaves at depth 3: 160
+  - Fanout Stats:
+    * [80, 90): 2
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 274
+    * [500, 1000): 412
+    * [1000, 1500): 466
+    * [1500, 2000): 6
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 0.105534%
+  - Avg Hit/Scanned            : 94.7718%
+  - Avg Leaves Searched/Query  : 34.156
+  - Avg Internal Visited/Query : 1.089
+  - Avg Refinement             : 3.39238%
+  - Median Latency             : 20μs
+  - 95th Percentile Latency    : 38μs
+  - 99th Percentile Latency    : 72μs
+  - 99.9th Percentile Latency  : 144μs
+  - Max Latency                : 144μs
+  - Avg Latency                : 22μs
+  - Avg Scan Latency           : 1μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 20μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 0.86954%
+    * [0, 1): 1.52682%
+    * [1, 4): 2.9863%
+    * [4, 9): 6.03408%
+    * [9, 16): 12.762%
+    * [16, 25): 27.0187%
+    * [25, 36): 31.5845%
+    * [36, 49): 17.1859%
+    * [49, 64): 0.0278136%
+    * [64, 81): 0.00439161%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 1750ms
+  - Total Time: 1750ms
+  - Time/Query: 1.75ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 237ms
+  - Query Time: 22ms
+  - Total Time: 259ms
+  - Time/Query: 0.022ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3005ms
+  - Query Time: 697ms
+  - Total Time: 3702ms
+  - Time/Query: 0.697ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 151ms
+  - Query Time: 23ms
+  - Total Time: 174ms
+  - Time/Query: 0.023ms
+  - Memory usage: 91.6641KB
+
+Selectivity: 0.001000
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.01S-random
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.01
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1001
+  - Num Leaves   : 1000
+  - Num Internal : 1
+  - Depth Stats  :
+    * Leaves at depth 2: 1000
+  - Fanout Stats:
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 1
+    * [500, 1000): 499
+    * [1000, 1500): 499
+    * [1500, 2000): 1
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 1.00962%
+  - Avg Hit/Scanned            : 99.0123%
+  - Avg Leaves Searched/Query  : 100.999
+  - Avg Internal Visited/Query : 1
+  - Avg Refinement             : 9.99724%
+  - Median Latency             : 102μs
+  - 95th Percentile Latency    : 149μs
+  - 99th Percentile Latency    : 197μs
+  - 99.9th Percentile Latency  : 263μs
+  - Max Latency                : 263μs
+  - Avg Latency                : 108μs
+  - Avg Scan Latency           : 27μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 80μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 5.05896%
+    * [0, 1): 10.1184%
+    * [1, 4): 19.3571%
+    * [4, 9): 31.3746%
+    * [9, 16): 28.678%
+    * [16, 25): 5.3852%
+    * [25, 36): 0.027723%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 2279ms
+  - Total Time: 2279ms
+  - Time/Query: 2.279ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 231ms
+  - Query Time: 180ms
+  - Total Time: 411ms
+  - Time/Query: 0.18ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3033ms
+  - Query Time: 4307ms
+  - Total Time: 7340ms
+  - Time/Query: 4.307ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 129ms
+  - Query Time: 109ms
+  - Total Time: 238ms
+  - Time/Query: 0.109ms
+  - Memory usage: 78.4141KB
+
+Selectivity: 0.009997
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.01S-normal
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.01
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1161
+  - Num Leaves   : 1158
+  - Num Internal : 3
+  - Depth Stats  :
+    * Leaves at depth 2: 998
+    * Leaves at depth 3: 160
+  - Fanout Stats:
+    * [80, 90): 2
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 277
+    * [500, 1000): 404
+    * [1000, 1500): 472
+    * [1500, 2000): 5
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 1.01398%
+  - Avg Hit/Scanned            : 98.6404%
+  - Avg Leaves Searched/Query  : 102.408
+  - Avg Internal Visited/Query : 1.093
+  - Avg Refinement             : 10.1855%
+  - Median Latency             : 103μs
+  - 95th Percentile Latency    : 136μs
+  - 99th Percentile Latency    : 184μs
+  - 99.9th Percentile Latency  : 222μs
+  - Max Latency                : 222μs
+  - Avg Latency                : 106μs
+  - Avg Scan Latency           : 25μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 80μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 0.843684%
+    * [0, 1): 1.57165%
+    * [1, 4): 2.35431%
+    * [4, 9): 5.3282%
+    * [9, 16): 11.1066%
+    * [16, 25): 23.8155%
+    * [25, 36): 35.7013%
+    * [36, 49): 19.2714%
+    * [49, 64): 0.00585892%
+    * [64, 81): 0.00146473%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 2070ms
+  - Total Time: 2070ms
+  - Time/Query: 2.07ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 225ms
+  - Query Time: 172ms
+  - Total Time: 397ms
+  - Time/Query: 0.172ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3096ms
+  - Query Time: 4542ms
+  - Total Time: 7638ms
+  - Time/Query: 4.542ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 131ms
+  - Query Time: 107ms
+  - Total Time: 238ms
+  - Time/Query: 0.107ms
+  - Memory usage: 91.6641KB
+
+Selectivity: 0.010002
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.1S-random
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.1
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1001
+  - Num Leaves   : 1000
+  - Num Internal : 1
+  - Depth Stats  :
+    * Leaves at depth 2: 1000
+  - Fanout Stats:
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [500, 1000): 497
+    * [1000, 1500): 503
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 10.0378%
+  - Avg Hit/Scanned            : 99.6904%
+  - Avg Leaves Searched/Query  : 317.311
+  - Avg Internal Visited/Query : 1
+  - Avg Refinement             : 31.6331%
+  - Median Latency             : 653μs
+  - 95th Percentile Latency    : 709μs
+  - 99th Percentile Latency    : 803μs
+  - 99.9th Percentile Latency  : 1170μs
+  - Max Latency                : 1170μs
+  - Avg Latency                : 660μs
+  - Avg Scan Latency           : 497μs
+  - Avg Refine Latency         : 1μs
+  - Avg Traverse Latency       : 161μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 5.1834%
+    * [0, 1): 10.2259%
+    * [1, 4): 19.0635%
+    * [4, 9): 31.2775%
+    * [9, 16): 28.6523%
+    * [16, 25): 5.56977%
+    * [25, 36): 0.0275755%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 3411ms
+  - Total Time: 3411ms
+  - Time/Query: 3.411ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 201ms
+  - Query Time: 1580ms
+  - Total Time: 1781ms
+  - Time/Query: 1.58ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 2514ms
+  - Query Time: 32551ms
+  - Total Time: 35065ms
+  - Time/Query: 32.551ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 118ms
+  - Query Time: 661ms
+  - Total Time: 779ms
+  - Time/Query: 0.661ms
+  - Memory usage: 78.4141KB
+
+Selectivity: 0.100067
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.1S-normal
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.1
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1161
+  - Num Leaves   : 1158
+  - Num Internal : 3
+  - Depth Stats  :
+    * Leaves at depth 2: 998
+    * Leaves at depth 3: 160
+  - Fanout Stats:
+    * [80, 90): 2
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 264
+    * [500, 1000): 423
+    * [1000, 1500): 466
+    * [1500, 2000): 5
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 10.0417%
+  - Avg Hit/Scanned            : 99.6248%
+  - Avg Leaves Searched/Query  : 283.85
+  - Avg Internal Visited/Query : 1.106
+  - Avg Refinement             : 31.6976%
+  - Median Latency             : 726μs
+  - 95th Percentile Latency    : 792μs
+  - 99th Percentile Latency    : 828μs
+  - 99.9th Percentile Latency  : 2862μs
+  - Max Latency                : 2862μs
+  - Avg Latency                : 734μs
+  - Avg Scan Latency           : 437μs
+  - Avg Refine Latency         : 0μs
+  - Avg Traverse Latency       : 296μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 0.927779%
+    * [0, 1): 1.71763%
+    * [1, 4): 2.82914%
+    * [4, 9): 5.47877%
+    * [9, 16): 10.9514%
+    * [16, 25): 22.0863%
+    * [25, 36): 36.0763%
+    * [36, 49): 19.926%
+    * [49, 64): 0.00651753%
+    * [64, 81): 0.000176149%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 3384ms
+  - Total Time: 3384ms
+  - Time/Query: 3.384ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 203ms
+  - Query Time: 1514ms
+  - Total Time: 1717ms
+  - Time/Query: 1.514ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 2909ms
+  - Query Time: 48340ms
+  - Total Time: 51249ms
+  - Time/Query: 48.34ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 137ms
+  - Query Time: 735ms
+  - Total Time: 872ms
+  - Time/Query: 0.735ms
+  - Memory usage: 91.6641KB
+
+Selectivity: 0.100040
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.5S-random
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.5
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1001
+  - Num Leaves   : 1000
+  - Num Internal : 1
+  - Depth Stats  :
+    * Leaves at depth 2: 1000
+  - Fanout Stats:
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [500, 1000): 504
+    * [1000, 1500): 496
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 50.0615%
+  - Avg Hit/Scanned            : 99.8595%
+  - Avg Leaves Searched/Query  : 708.229
+  - Avg Internal Visited/Query : 1
+  - Avg Refinement             : 70.6886%
+  - Median Latency             : 3227μs
+  - 95th Percentile Latency    : 3461μs
+  - 99th Percentile Latency    : 3794μs
+  - 99.9th Percentile Latency  : 3932μs
+  - Max Latency                : 3932μs
+  - Avg Latency                : 3228μs
+  - Avg Scan Latency           : 2474μs
+  - Avg Refine Latency         : 1μs
+  - Avg Traverse Latency       : 751μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 5.42205%
+    * [0, 1): 10.6756%
+    * [1, 4): 20.1744%
+    * [4, 9): 32.1041%
+    * [9, 16): 27.1714%
+    * [16, 25): 4.43444%
+    * [25, 36): 0.0180733%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 4918ms
+  - Total Time: 4918ms
+  - Time/Query: 4.918ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 204ms
+  - Query Time: 7798ms
+  - Total Time: 8002ms
+  - Time/Query: 7.798ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3367ms
+  - Query Time: 254428ms
+  - Total Time: 257795ms
+  - Time/Query: 254.428ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 157ms
+  - Query Time: 3229ms
+  - Total Time: 3386ms
+  - Time/Query: 3.229ms
+  - Memory usage: 78.4141KB
+
+Selectivity: 0.499912
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.5S-normal
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.5
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1161
+  - Num Leaves   : 1158
+  - Num Internal : 3
+  - Depth Stats  :
+    * Leaves at depth 2: 998
+    * Leaves at depth 3: 160
+  - Fanout Stats:
+    * [80, 90): 2
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 273
+    * [500, 1000): 409
+    * [1000, 1500): 472
+    * [1500, 2000): 4
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 50.0603%
+  - Avg Hit/Scanned            : 99.8808%
+  - Avg Leaves Searched/Query  : 644.941
+  - Avg Internal Visited/Query : 1.246
+  - Avg Refinement             : 70.5277%
+  - Median Latency             : 3184μs
+  - 95th Percentile Latency    : 3316μs
+  - 99th Percentile Latency    : 4014μs
+  - 99.9th Percentile Latency  : 4178μs
+  - Max Latency                : 4178μs
+  - Avg Latency                : 3200μs
+  - Avg Scan Latency           : 2545μs
+  - Avg Refine Latency         : 2μs
+  - Avg Traverse Latency       : 652μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 1.20802%
+    * [0, 1): 1.60542%
+    * [1, 4): 1.89808%
+    * [4, 9): 3.71918%
+    * [9, 16): 7.26113%
+    * [16, 25): 15.9809%
+    * [25, 36): 32.8456%
+    * [36, 49): 35.4755%
+    * [49, 64): 0.00589201%
+    * [64, 81): 7.75265e-05%
+    * [81, 100): 0%
+    * [100, 121): 0.000155053%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 4899ms
+  - Total Time: 4899ms
+  - Time/Query: 4.899ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 202ms
+  - Query Time: 7819ms
+  - Total Time: 8021ms
+  - Time/Query: 7.819ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3481ms
+  - Query Time: 276884ms
+  - Total Time: 280365ms
+  - Time/Query: 276.884ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 157ms
+  - Query Time: 3201ms
+  - Total Time: 3358ms
+  - Time/Query: 3.201ms
+  - Memory usage: 91.6641KB
+
+Selectivity: 0.500006
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.9S-random
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.9
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1001
+  - Num Leaves   : 1000
+  - Num Internal : 1
+  - Depth Stats  :
+    * Leaves at depth 2: 1000
+  - Fanout Stats:
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [500, 1000): 481
+    * [1000, 1500): 519
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 90.0892%
+  - Avg Hit/Scanned            : 99.8968%
+  - Avg Leaves Searched/Query  : 949.866
+  - Avg Internal Visited/Query : 1
+  - Avg Refinement             : 94.856%
+  - Median Latency             : 5744μs
+  - 95th Percentile Latency    : 5985μs
+  - 99th Percentile Latency    : 7186μs
+  - 99.9th Percentile Latency  : 8092μs
+  - Max Latency                : 8092μs
+  - Avg Latency                : 5754μs
+  - Avg Scan Latency           : 4885μs
+  - Avg Refine Latency         : 1μs
+  - Avg Traverse Latency       : 867μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 4.95512%
+    * [0, 1): 9.2452%
+    * [1, 4): 17.1457%
+    * [4, 9): 27.6027%
+    * [9, 16): 31.3117%
+    * [16, 25): 9.70774%
+    * [25, 36): 0.0318466%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 5409ms
+  - Total Time: 5409ms
+  - Time/Query: 5.409ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 204ms
+  - Query Time: 14369ms
+  - Total Time: 14573ms
+  - Time/Query: 14.369ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3360ms
+  - Query Time: 396582ms
+  - Total Time: 399942ms
+  - Time/Query: 396.582ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 142ms
+  - Query Time: 5755ms
+  - Total Time: 5897ms
+  - Time/Query: 5.755ms
+  - Memory usage: 78.4141KB
+
+Selectivity: 0.899962
+==============================================
+Benchmark Details:
+  - Type           : 2D-0.9S-normal
+  - Dimension      : 2
+  - # Data points  : 1000000
+  - # Queries      : 1000
+  - Avg Selectivity: 0.9
+
+RTree finished building
+PiTree Statistics:
+  - Max Fanout   : 1000
+  - Page Size    : 5000
+  - Num Nodes    : 1161
+  - Num Leaves   : 1158
+  - Num Internal : 3
+  - Depth Stats  :
+    * Leaves at depth 2: 998
+    * Leaves at depth 3: 160
+  - Fanout Stats:
+    * [80, 90): 2
+    * [990, 1000): 1
+  - Leaf Range Stats:
+    * [0, 500): 274
+    * [500, 1000): 410
+    * [1000, 1500): 469
+    * [1500, 2000): 5
+PiTree Range Query Statistics:
+  - Queries                    : 1000
+  - Avg Scanned                : 90.1287%
+  - Avg Hit/Scanned            : 99.878%
+  - Avg Leaves Searched/Query  : 1105.93
+  - Avg Internal Visited/Query : 2.478
+  - Avg Refinement             : 92.3398%
+  - Median Latency             : 5799μs
+  - 95th Percentile Latency    : 5995μs
+  - 99th Percentile Latency    : 6843μs
+  - 99.9th Percentile Latency  : 7908μs
+  - Max Latency                : 7908μs
+  - Avg Latency                : 5824μs
+  - Avg Scan Latency           : 4842μs
+  - Avg Refine Latency         : 1μs
+  - Avg Traverse Latency       : 980μs
+  - Prediction Error Stats     : 
+    * [0, 0]: 5.02186%
+    * [0, 1): 6.59949%
+    * [1, 4): 5.43604%
+    * [4, 9): 11.4735%
+    * [9, 16): 22.2892%
+    * [16, 25): 29.9543%
+    * [25, 36): 18.0915%
+    * [36, 49): 1.03487%
+    * [49, 64): 0.0894267%
+    * [64, 81): 0.00822834%
+    * [81, 100): 0%
+    * [100, 121): 0.00153716%
+
+Results for FullScan:
+  - Load Time: 0ms
+  - Query Time: 5203ms
+  - Total Time: 5203ms
+  - Time/Query: 5.203ms
+  - Memory usage: 0KB
+
+Results for KdTree:
+  - Load Time: 202ms
+  - Query Time: 14400ms
+  - Total Time: 14602ms
+  - Time/Query: 14.4ms
+  - Memory usage: 78125KB
+
+Results for R*-Tree:
+  - Load Time: 3480ms
+  - Query Time: 462801ms
+  - Total Time: 466281ms
+  - Time/Query: 462.801ms
+  - Memory usage: 7843.83KB
+
+Results for PiTree(maxFanout=1000, pageSize=5000):
+  - Load Time: 168ms
+  - Query Time: 5826ms
+  - Total Time: 5994ms
+  - Time/Query: 5.826ms
+  - Memory usage: 91.6641KB
+
+Selectivity: 0.900187
