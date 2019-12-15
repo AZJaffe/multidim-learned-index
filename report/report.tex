@@ -183,7 +183,39 @@ endpoint.
 
 \section{Single Dimensional Case}
 
-% Xiyeng TODO
+\subsection{Motivation}
+% TODO diagram for single dimension learned index
+
+As described in Section 2, the main idea of single dimension learned index is to replace
+the traditional indexing structure like B-Tree with a machine learning model that is able
+to learn the underlying data distribution. For point lookup, the learned index takes a key
+as input and predicts the position of the key in the data layout. The prediction does not
+necessarily to be exact as a quadratic search is introduced to correct the prediction error.
+
+Theoretically, the point lookup time for single dimension learned index equals to time
+traversing the RMI plus time doing quadratic search. A model that can compute easily and predict
+accurately is the key to speed up point lookup. However, there is usually a trade off between
+model accuracy and computational cost in machine learning. For example, deep neural net is able
+to model complex data distribution but is also extremely expensive to compute. On the other hand,
+linear regression only involves one multiplication and one addition, but it only model linear
+distributed data effectively. Kraska adopted linear regression based RMI in their single dimension
+learned index mainly because the layout of single dimension data is trivial such that it can be
+effectively learned by linear models. However, such property may not hold for high dimension cases.
+Therefore, we think it worth first studying the trade off between model accuracy and model
+computational cost. The result may guide us on the choice of models. 
+
+\subsection{Experiment}
+
+We implemented our single dimension learned index with a two-stage RMI as proposed in 
+Kraska's paper \cite{Learned_Index}. The two-stage RMI is configured to be able to accept
+any model that takes a key as input and generates a position as output such that we can
+plugin any machine learning model as needed. For simplicity, we only test on linear regression
+model and neural net with one hidden layer that has eight hidden nodes. A native B-Tree with no optimization is also implemented
+as the baseline. All indexing structures are implemented in Python as we do not care absolute
+performance in single dimension case as long as the comparison is fair and Python provides powerful
+machine learning modules such as tensorflow. 
+
+% TODO add single dimensional result
 
 \section{PiTree Design}
 
@@ -262,20 +294,33 @@ to determine which child node to route to.
 
 \section{Evaluation}
 
-This section first describes experiment setup together with baselines and datasets. Then we present the performance of PiTree compared with other state of the art indexing methods on different datasets followed by an in-depth evaluation. Overall the results show that:
+This section first describes experiment setup together with baselines and datasets. 
+Then we present the performance of PiTree compared with other state of the art 
+indexing methods on different datasets followed by an in-depth evaluation. 
+Overall the results show that:
 \begin{itemize}
     \item TODO
 \end{itemize}
 
 \subsection{Experiment Setup}
 
-All the tests are run on a Ubuntu 18.04 machine with 16 GB of memory and an Intel Core i7-6770HQ processor with 4 cores and 8 threads. PiTree and other indexing structures are implemented in C++ and compiled with optimization level -O3. All the data and indexing structures are stored in the memory so that no disk operation is involved in building indexing or executing queries.
+All the tests are run on a Ubuntu 18.04 machine with 16 GB of memory and an Intel 
+Core i7-6770HQ processor with 4 cores and 8 threads. PiTree and other indexing 
+structures are implemented in C++ and compiled with optimization level -O3. 
+All the data and indexing structures are stored in the memory so that no disk 
+operation is involved in building indexing or executing queries.
 
 \subsection{Baselines}
 
-We compare PiTree to three other widely used multidimensional range query approaches named Full Scan, KD-Tree and R-Tree. Details about these baselines are listed as follow. 
+We compare PiTree to three other widely used multidimensional range query approaches 
+named Full Scan, KD-Tree and R-Tree. Details about these baselines are listed 
+as follow. 
 \begin{itemize}
-    \item \textbf{Full Scan}. Full Scan visits every point in the dataset and compare every dimension appears in the query. This method is expected to have the worst lookup time when the range queries are small. On the other hand, when range queries are large enough that indexing structures are not able to prune effectively, full scan should show a competitive performance.
+    \item \textbf{Full Scan}. Full Scan visits every point in the dataset and 
+    compare every dimension appears in the query. This method is expected to have 
+    the worst lookup time when the range queries are small. On the other hand, 
+    when range queries are large enough that indexing structures are not able to 
+    prune effectively, full scan should show a competitive performance.
     \item \textbf{KD-Tree}. KD-Tree is essentially a binary search tree 
     \item \textbf{R-Tree}
 \end{itemize}
