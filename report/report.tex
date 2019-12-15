@@ -220,7 +220,8 @@ machine learning modules such as tensorflow.
 \section{PiTree Design}
 
 PiTree is a multidimensional in-memory learned tree index structure for
-mutlidimensional range queries.
+mutlidimensional range queries. Currently, only complete range queries are supported.
+Partial range queries are possible to support but are not included in this report. 
 PiTree indexes a static dataset and does not support dynamic inserts, deletes,
 although we believe it is possible to extend PiTree to allow dynamic inserts and deletes,
 in the same way ALEX built upon the original RMI structure to achieve this functionality. % CITE ALEX
@@ -286,11 +287,46 @@ smaller projection than $k$.
 
 The fanout for an internal node is $(end - start) / pageSize$, up to a maximum determined
 by the parameter $maxFanout$. Internal nodes use the fanout along with the linear model
-to determine which child node to route to. 
+to determine which child node to route to.
 
 \subsection{Constructing The Tree}
 
-\subsection{Range Search}
+A PiTree is constructed from a static dataset in bulk loading process.
+The tree is constructed recursively, with each node having a start and 
+end index. The root is constructed with $start=0$ and $end=N$ where $N$
+is the size of dataset. The base case is when $end - start \leq pageSize$,
+in which case the node is a leaf.
+First, use the projection policy to select a projection $proj$.
+Second, construct a linear CDF model $M$ from the projections of the range of datapoints
+the node indexes. If the node is leaf, stop. Otherwise,
+compute the fanout 
+\[
+  f = \frac{end - start}{page\_size}.
+\]
+
+If $f > max\_fanout$, then set $f = max\_fanout$. This limits
+the node from being too wide.
+Then partition the interval $[start, end)$ into $f$ partitions
+where the $i$-th partition 
+\[
+  P_i = \left\{j \in [start, end): \frac{i}{f} \leq M(proj \cdot d[j]) < \frac{i+1}{f} \right\}.
+\]
+
+Then the endpoints of each partition are used to recursively initialize child nodes.
+If the model accurately represents the CDF of the data, which would be the case
+if the data is nearly uniformly distributed under the projection,
+it will be the case that each partition will have approximately the same number of
+points $\frac{1}{f}$. The further from uniform the distribution becomes,
+the less even the partitions will be.
+
+
+\subsection{Point Search}
+
+Although intended for multidimensional range queries,
+PiTree can also handle point lookups. Understanding how point lookups
+work will make it easier to understand how range queries
+
+\subsection{Multidimensional Range Search}
 
 \section{Evaluation}
 
