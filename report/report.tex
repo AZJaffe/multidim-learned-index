@@ -30,6 +30,9 @@
 
 \settopmatter{printfolios=true}
 
+\pagestyle{plain} % removes running headers
+\settopmatter{printacmref=false} % Removes citation information below abstract
+
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
 \AtBeginDocument{%
@@ -60,7 +63,7 @@
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{PiTree: A Multidimensional Learned Index}
+\title{Pi-Tree: A Multidimensional Learned Index}
 
 
 \author{Adam Jaffe}
@@ -128,16 +131,16 @@ Bucketing coarsely partitions the data space, which are then scanned and filtere
 the result set.
 % TODO cite VA-file, grid file, locality sensitive hashing
 
-In this paper we present PiTree, a learned multidimensional index designed for
+In this paper we present Pi-Tree, a learned multidimensional index designed for
 in-memory multidimensional range queries capable of indexing
-data of arbitrary dimension. PiTree extends in a natural way the recursive model index (RMI) strucutre
+data of arbitrary dimension. Pi-Tree extends in a natural way the recursive model index (RMI) strucutre
 ideas from the original learned index paper to a multidimensional space.
 Our main contributions are:
 \begin{enumerate}
-  \item The design and implementation from scratch of the PiTree multidimensaional learned index in C++
+  \item The design and implementation from scratch of the Pi-Tree multidimensaional learned index in C++
   % TODO highlight benchmark results
-  \item A thorough evaluation of PiTree against an R*-Tree and kd-Tree 
-  \item A discussion of future work to improve the performance of PiTree
+  \item A thorough evaluation of Pi-Tree against an R*-Tree and kd-Tree 
+  \item A discussion of future work to improve the performance of Pi-Tree
 \end{enumerate}
 
 The rest of this report will be structured as follows. % TODO
@@ -244,7 +247,7 @@ dataset with 100 thousand data points. Each point is queried exactly once in the
 All tests are conducted under the same environment as described in Section 5.1. Table 1 shows
 the benchmark results of BTree, linear model based RMI and neural net based RMI. Although
 BTree appears to be the best indexing structure across all evaluation metrics, we believe the
-overhead mainly comes from the tensorflow module as, later on when we finish implementing PiTree
+overhead mainly comes from the tensorflow module as, later on when we finish implementing Pi-Tree
 and linear regression in C++, the performance is suprisingly good.
 
 In terms of point lookup speed, neural net is about 20 times slower than linear regression model.
@@ -270,21 +273,21 @@ be very accurate but has to be easy to compute. Otherwise, traversing RMI will d
 The rationale behind this is simple. When it takes too much effort to correct the prediction, a better
 approach is to simply leave the prediction as is while scanning everything in between. 
 
-\section{PiTree Design}
+\section{Pi-Tree Design}
 
-PiTree is a multidimensional in-memory learned tree index structure for
+Pi-Tree is a multidimensional in-memory learned tree index structure for
 mutlidimensional range queries. Currently, only complete range queries are supported.
 Partial range queries are possible to support but are not included in this report. 
-PiTree indexes a static dataset and does not support dynamic inserts, deletes,
-although we believe it is possible to extend PiTree to allow dynamic inserts and deletes,
+Pi-Tree indexes a static dataset and does not support dynamic inserts, deletes,
+although we believe it is possible to extend Pi-Tree to allow dynamic inserts and deletes,
 in the same way ALEX built upon the original RMI structure to achieve this functionality. % CITE ALEX
 
 The datapoints, all of dimension $D$, are stored as one contiguous in-memory array.
-Nodes in PiTree are comprised of a projection onto a single dimension, which it uses to
+Nodes in Pi-Tree are comprised of a projection onto a single dimension, which it uses to
 sort data points, and a linear regression model which models the CDF of a segment of the data.
 Internal nodes use the linear model to select a child node to route to.
 Leaf nodes use the linear model to find the relevant data point. 
-PiTree is configurable with two parameters: the $pageSize$, 
+Pi-Tree is configurable with two parameters: the $pageSize$, 
 which bounds the number of data points
 a leaf node indexes, as well as $maxFanout$, which bounds the fanout
 of an internal node.
@@ -294,8 +297,8 @@ of an internal node.
 \begin{figure}
   % TODO include this
   % \includegraphics[scale=0.5]{node_structure.png}
-  \caption{PiTree Node Structure}
-  \label{PiTreeNode}
+  \caption{Pi-Tree Node Structure}
+  \label{Pi-TreeNode}
 \end{figure}
 
 
@@ -304,7 +307,7 @@ Nodes contain a projection vector $proj_n$ of the same dimension of the data
 which it uses to sort the range of data it indexes. 
 To be precise, if $d_1, d_2$ are two datapoints, the node will 
 sort $d_1$ before $d_2$ if $d_1 \cdot proj_n < d_2 \cdot proj$.
-PiTree uses a policy to select a projection on a per-node basis. In this report,
+Pi-Tree uses a policy to select a projection on a per-node basis. In this report,
 we only tested a policy which chooses a dimension to project onto in a round-robin
 fashion, similar to how a kd-tree selects which dimension to split at each depth.
 In particular, if a node is at depth $h$, then its
@@ -339,7 +342,7 @@ to determine which child node to route to.
 \subsection{Constructing The Tree}
 
 \begin{algorithm}
-  \caption{Building A PiTree}
+  \caption{Building A Pi-Tree}
   \begin{algorithmic}[1]
     \Procedure{BuildSubTree}{$start,end$}
     \State $n\gets new Node()$
@@ -381,7 +384,7 @@ to determine which child node to route to.
   \end{algorithmic}
 \end{algorithm}
 
-A PiTree is constructed from a static dataset in bulk loading process.
+A Pi-Tree is constructed from a static dataset in bulk loading process.
 The tree is constructed recursively, with each node having a start and 
 end index. The root is constructed with $start=0$ and $end=N$ where $N$
 is the size of dataset. The base case is when $end - start \leq pageSize$,
@@ -414,7 +417,7 @@ the less even the partitions will be.
 \subsection{Point Queries}
 
 Although designed for multidimensional range queries,
-PiTree can also handle point lookups. Understanding how point lookups
+Pi-Tree can also handle point lookups. Understanding how point lookups
 work will make it easier to understand how range queries are executed.
 A point query has two phases: a traversal down the tree, then a local search
 in a leaf.
@@ -429,7 +432,7 @@ At an internal node $n$, compute $c = \lfloor M(q \cdot proj) \cdot fanout \rflo
 and recursively search for $q$ in the child $n.child[c]$.
 At first, it may seem surprising that only child $c$ needs to be searched
 since we're relying on the model to select the child node to search.
-However, by the way PiTree is constructed, the model is never wrong.
+However, by the way Pi-Tree is constructed, the model is never wrong.
 If $q$ were to be in the dataset,
 it will be indexed by child $c$. Looking up the proper child node thus takes only
 $\Theta(D)$ time, to compute the projection. Compared to a B-Tree, whose
@@ -458,7 +461,7 @@ making exponential search very fast.
 \subsection{Multidimensional Range Queries}
 
 A multidimensional range query is interested in all points in the 
-dataset that are within a given hyperrectangle. For a $D$ dimensional PiTree,
+dataset that are within a given hyperrectangle. For a $D$ dimensional Pi-Tree,
 a range query is given as two arrays, $min$ and $max$, both of length $D$
 and whose result set is all datapoints $d$ in the $D$ dimensional dataset 
 that are within the hyperrectangle that has $min$ and $max$ as opposite vertices.
@@ -536,7 +539,7 @@ Fortunately, since the projection is linear and the hyperrectangle
 is axis-aligned, this is an easy task. To compute the minimum for examlple,
 sum the products of $proj[i] \cdot min[i]$ or $proj[i] \cdot max[i]$ depending
 if $proj[i]$ is positive or negative. This prodedure takes $\mathcal{O}(D)$ time
-and is shown in Algorithm \ref{rqInternal}. The fact that PiTree uses linear projections
+and is shown in Algorithm \ref{rqInternal}. The fact that Pi-Tree uses linear projections
 makes solving this optimization problem trivial. Using a more
 complex projection function will result in a more
 difficult optimization problem to be solved in this step, increasing
@@ -571,7 +574,7 @@ If so, add it to the result set, otherwise continue scanning.
 \section{Evaluation}
 
 This section first describes experiment setup together with baselines and datasets. 
-Then we present the performance of PiTree compared with other state of the art 
+Then we present the performance of Pi-Tree compared with other state of the art 
 indexing methods on different datasets followed by an in-depth evaluation. 
 Overall the results show that:
 \begin{itemize}
@@ -581,14 +584,14 @@ Overall the results show that:
 \subsection{Experiment Setup}
 
 All the tests are run on a Ubuntu 18.04 machine with 16 GB of memory and an Intel 
-Core i7-6770HQ processor with 4 cores and 8 threads. PiTree and other indexing 
+Core i7-6770HQ processor with 4 cores and 8 threads. Pi-Tree and other indexing 
 structures are implemented in C++ and compiled with optimization level -O3. 
 All the data and indexing structures are stored in the memory so that no disk 
 operation is involved in building indexing or executing queries.
 
 \subsection{Baselines}
 
-We compare PiTree to three other widely used multidimensional range query approaches 
+We compare Pi-Tree to three other widely used multidimensional range query approaches 
 named Full Scan, KD-Tree and R-Tree. Details about these baselines are listed 
 as follow. 
 \begin{itemize}
@@ -655,7 +658,7 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
   \centering
   \begin{tabular}{|c|c|c|c|c|}
     \hline
-          & full scan & KD-Tree & R-Tree & PiTree \\
+          & full scan & KD-Tree & R-Tree & Pi-Tree \\
     \hline
     random & 0 & 78125 & 7843 & 78 \\
     \hline
@@ -711,22 +714,22 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
   All datasets has a dimension of 2 and a selectivity of 0.1}
 \end{figure*}
 
-We first benchmark the building time, memory usage and query speed of PiTree against
+We first benchmark the building time, memory usage and query speed of Pi-Tree against
 other indexing structures under 3 distributions. Figure 4 shows the average query time of
-PiTree is 2-3 times faster than the next closest indexing structure. PiTree is beated by
+Pi-Tree is 2-3 times faster than the next closest indexing structure. Pi-Tree is beated by
 KD-Tree under zipfian distribution where data is highly skewed and cannot be learned effectively
 by linear regression. A print of Pi-Tree shows that it tries to learn the whole distribution
 with a single node which results in large prediciton errors.
 
-In terms of memory usage (see Table 3), PiTree is able to reduce the memory usage by 2-3 order of magnitude
+In terms of memory usage (see Table 3), Pi-Tree is able to reduce the memory usage by 2-3 order of magnitude
 since it significantly reduce the depth of the tree by utilitizing linear regression with fanout and
-page size. The size of PiTree various across different distributions as it will learn a reasonable number
-of node for a particular distribution. In Table 3, the size of PiTree is only 0.1KB for zipf
-distribution as it only create one node for the whole distribution. PiTree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
+page size. The size of Pi-Tree various across different distributions as it will learn a reasonable number
+of node for a particular distribution. In Table 3, the size of Pi-Tree is only 0.1KB for zipf
+distribution as it only create one node for the whole distribution. Pi-Tree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
 faster than R-Tree as shown in Figure 5. Such building time is independent from distributions.
 
 Figure 6 shows the prediciton error distribution that helps to understand the performance
-difference of PiTree under different distributions. It's not suprising to see that PiTree
+difference of Pi-Tree under different distributions. It's not suprising to see that Pi-Tree
 models random uniform distribution best with an error bounded by 25 entries. The error under
 normal distribution is also reasonable and can be corrected within several steps of quadratic
 search. While the error for zipfian distribution goes beyond 300 entries and results in the
@@ -844,7 +847,7 @@ Recently, a multidimensional leanred index strucuture called Flood has been prop
 Flood is most similar to a grid file
 \cite{Grid-File}, which partitions the data in a grid-like fashion.
 Flood has a global axis-aligned projection and partitioning scheme,
-while PiTree projects and partitions at a per-node basis. 
+while Pi-Tree projects and partitions at a per-node basis. 
  
 Many other multidimensional indexing schemes have been proposed
 over the past decades. R-Trees are popular for indexing spatial data,
@@ -855,7 +858,7 @@ indexing points, especially in higher dimensions.
 
 Kd-Trees are popular for nearest neighbour queries 
 and can also perform range queries \cite{kd-Tree,ModernMDRQ}.
-PiTree, with the round-robin projection policy, can be though of as a combination
+Pi-Tree, with the round-robin projection policy, can be though of as a combination
 of a kd-Tree and an RMI \cite{Learned_Index}. 
 An extension of the kd-Tree, called the cracking kd-tree adaptively
 changes its structure while processing queries in order to improve 
@@ -865,11 +868,31 @@ of the data.
 
 \section{Future Work}
 
-\subsection{PCA}
+Due to time constaints there are a few things
+that we wanted to explore but did not have time.
+Most importantly, we wanted to explore using different
+projection selection policies, and in particular using
+non-axis aligned policies to account for non-independent dimensions.
+Most work in databases assumes independence between columns,
+for example for cost estimation in the query optimizer \cite{SelectivityEstimation}.
+Incorporating off-axis projection could theoretically better model 
+correlated dimensions.
 
-\subsection{Cost Model}
+One policy that could produce off-axis projections is using
+Principal Component Analysis (PCA). The idea would be to 
+pick the first princiapl component which is the projection that captures
+the maximum possible variance in the data.
+
+Another idea is to incorporate cost model to determine how the tree is build.
+Currently, Pi-Tree uses two paramters and a simple heuristic to determine
+if a node should be a leaf and the fanout of internal nodes.
+Further exploration could be done on how to better determine the ideal
+fanout of each node.
 
 \section{Conclusion}
+
+This paper has presented the design of a simple,
+novel, performant, multidimensional learned index strucutre.
 
 %%
 %% The acknowledgments section is defined using the "acks" environment
@@ -877,7 +900,8 @@ of the data.
 %% identification of the section in the article metadata, and the
 %% consistent spelling of the heading.
 \begin{acks}
-Adam wants to thank his girlfriend Akshaya for always helping me when I need it.
+Adam wants to thank his girlfriend Akshaya for always being there and
+helping out.
 \end{acks}
 
 %%
