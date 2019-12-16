@@ -292,6 +292,7 @@ of an internal node.
 \subsection{Node Structure}
 
 \begin{figure}
+  % TODO include this
   % \includegraphics[scale=0.5]{node_structure.png}
   \caption{PiTree Node Structure}
   \label{PiTreeNode}
@@ -307,7 +308,7 @@ PiTree uses a policy to select a projection on a per-node basis. In this report,
 we only tested a policy which chooses a dimension to project onto in a round-robin
 fashion, similar to how a kd-tree selects which dimension to split at each depth.
 In particular, if a node is at depth $h$, then its
-$D$ dimensional projection vector is the basis vector $e_{h \% D}$ that has components 
+$D$ dimensional projection vector is the standard basis vector $e_{h \% D}$ that has components 
 $$a_j = \begin{cases} 
   1 & j \equiv h \mod D \\
   0 & otherwise
@@ -666,6 +667,32 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
 
 \section{Related Work}
 
+Both the original learned index work, and a followup SageDB
+proposed applying a learned based approach to multidimensional indexing,
+but neither provided details \cite{Learned_Index,SageDB}.
+Recently, a multidimensional leanred index strucuture called Flood has been proposed  \cite{Flood}. 
+Flood is most similar to a grid file
+\cite{Grid-File}, which partitions the data in a grid-like fashion.
+Flood has a global axis-aligned projection and partitioning scheme,
+while PiTree projects and partitions at a per-node basis. 
+ 
+Many other multidimensional indexing schemes have been proposed
+over the past decades. R-Trees are popular for indexing spatial data,
+since they are capable of indexing regions and not only points \cite{R-Tree,R*-Tree}.
+For instance, PostGIS uses an R-Tree for indexing \cite{PostGIS}.
+However, as shown in the benchmarks, the R-Tree does not excel at 
+indexing points, especially in higher dimensions.
+
+Kd-Trees are popular for nearest neighbour queries 
+and can also perform range queries \cite{kd-Tree,ModernMDRQ}.
+PiTree, with the round-robin projection policy, can be though of as a combination
+of a kd-Tree and an RMI \cite{Learned_Index}. 
+An extension of the kd-Tree, called the cracking kd-tree adaptively
+changes its structure while processing queries in order to improve 
+the performance for subsequent queries \cite{CrackingKD-Tree}.
+These approaches use only local policies and do not incorporate the global distribution
+of the data.
+
 \section{Future Work}
 
 \subsection{PCA}
@@ -680,14 +707,14 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
 %% identification of the section in the article metadata, and the
 %% consistent spelling of the heading.
 \begin{acks}
-I'd like to thank my girlfriend Akshaya for always helping me when I need it.
+Adam wants to thank his girlfriend Akshaya for always helping me when I need it.
 \end{acks}
 
 %%
 %% The next two lines define the bibliography style to be used, and
 %% the bibliography file.
 \bibliographystyle{ACM-Reference-Format}
-\bibliography{refs}
+\bibliography{refs.bib}
 
 
 \end{document}
