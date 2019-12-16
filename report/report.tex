@@ -177,12 +177,21 @@ Since RMI is a clustered index, it is capable of performing single dimensional r
 by simply finding the left endpoint range, then scanning to the right until reaching the right
 endpoint.
 
-% TODO diagram for RMI
+\begin{figure}
+  \includegraphics[scale=0.6]{../figures/RMI}
+  \caption{RMI\cite{Learned_Index}}
+  \label{RMI}
+\end{figure}
 
 \section{Single Dimensional Case}
 
 \subsection{Motivation}
-% TODO diagram for single dimension learned index
+
+\begin{figure}[h]
+  \includegraphics[scale=0.6]{../figures/single-dim-learned-index}
+  \caption{Single dimensional learned index \cite{Learned_Index}}
+  \label{singleDimensionalLearnedIndex}
+\end{figure}
 
 As described in Section 2, the main idea of single dimensional learned index is to replace
 the traditional indexing structure like B-Tree with a machine learning model that is able
@@ -282,11 +291,11 @@ of an internal node.
 
 \subsection{Node Structure}
 
-\begin{figure}
-  \includegraphics[scale=0.5]{node_structure.png}
-  \caption{PiTree Node Structure}
-  \label{PiTreeNode}
-\end{figure}
+% \begin{figure}
+%   \includegraphics[scale=0.5]{node_structure.png}
+%   \caption{PiTree Node Structure}
+%   \label{PiTreeNode}
+% \end{figure}
 
 
 Each node $n$ is responsible for indexing the range of the data array with indexes in $[start_n, end_n)$.
@@ -385,7 +394,7 @@ compute the fanout
 \]
 
 If $f > max\_fanout$, then set $f = max\_fanout$. This limits
-the node from being too wide.
+the node from being too wide. 
 Finally, partition the interval $[start, end)$ into $f$ partitions
 where the $i$-th partition is given by
 \[
@@ -515,7 +524,7 @@ as follow.
     access method such as indexing geographical coordinates. We used a variant of R-Tree named
     R*-Tree which is optimized for better query performance. A bulk loading method is also 
     implemented to support testing on large dataset. We benchmarked the R*-Tree implementation
-    provided by libspatialindex. % TODO add reference.
+    provided by libspatialindex.\cite{libSpatialIndex}
 
 \end{itemize}
 
