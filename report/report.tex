@@ -102,8 +102,7 @@
 \section{Introduction}
 
 Analytical database engines store and process queries on large volumes of data.
-Typically, in modern systems, this data is stored in memory. %TODO CITE
-These systems scan and filter their data to execute queries.
+These systems scan and filter large volumes of data to execute queries.
 Multidimensional range queries are a type of query defined by 
 intervals in all or some of the columns and are interested in all data items
 that are within all the given intervals. Multidimensional range queries that don't specify
@@ -117,19 +116,9 @@ With the explosion of analytical data comes the need to answer multidimensional 
 quickly on large datasets. Multiple approaches have been taken to perform better than
 fully scanning the dataset, which is quite wasteful if selectivity
 of the query is low. If queries are very selective in one column, then sorting the data
-according to that column and building a B-Tree can be a good approach. % TODO CITE
+according to that column and building a B-Tree on that column can be a good approach. 
 Another approach is to use a multidimensional index, which uses data from multiple dimensions
-in its structure. Space filling curves, tree-based structures, and bucketing are three popular approaches
-to build multidimensional indexes. Space filling curves, such as the Z-order or the Hilbert curve,
-can be used to define an order on $n$-dimensional space, which can then be indexed using 
-single-dimensional methods. % TODO cite Hilbert and Z-order
-A complication of this approach is that points that are close in
-n-dimensional space are not necessarily close together on the curve. % TODO Cite this
-Tree-based structures can be though of as the multidimensional extension of B-Trees.
-There are a variety methods that take this approach, such as R-Trees, kd-trees. % TODO Cite
-Bucketing coarsely partitions the data space, which are then scanned and filtered to produce
-the result set.
-% TODO cite VA-file, grid file, locality sensitive hashing
+in its structure. 
 
 In this paper we present Pi-Tree, a learned multidimensional index designed for
 in-memory multidimensional range queries capable of indexing
@@ -143,7 +132,53 @@ Our main contributions are:
   \item A discussion of future work to improve the performance of Pi-Tree
 \end{enumerate}
 
-The rest of this report will be structured as follows. % TODO
+The rest of this report will be structured as follows.
+Section 2 covers related work. Section 3 and 4 describes
+work done on learned indices in the single dimensional case.
+Section 5 describes the design and implementation
+of Pi-Tree. Section 6 highlights our benchmarking results. Section 7
+outlines potential future work to be done.
+
+\section{Related Work}
+
+Both the original learned index work, and SageDB
+proposed applying a learned based approach to multidimensional indexing,
+but neither provided details \cite{Learned_Index,SageDB}.
+Recently, a multidimensional leanred index strucuture called Flood has been proposed  \cite{Flood}. 
+Flood is most similar to a grid file
+\cite{Grid-File}, which partitions the data in a grid-like fashion.
+Flood has a global axis-aligned projection and partitioning scheme,
+while Pi-Tree projects and partitions at a per-node basis. 
+
+Many other multidimensional indexing schemes have been proposed
+over the past decades. Three main approaches have been taken:
+space filling curves, tree-based structures, and bucketing are three popular approaches
+to build multidimensional indexes. Space filling curves, such as the Z-order,
+can be used to define an order on $n$-dimensional space, which can then be indexed using 
+single-dimensional methods \cite{UB-Tree}. 
+A complication of this approach is that points that are close in
+n-dimensional space are not necessarily close together on the curve.
+Tree-based structures can be though of as the multidimensional extension of B-Trees.
+There are a variety methods that take this approach, such as R-Trees, kd-trees
+\cite{R-Tree,R*-Tree,kd-Tree}.
+Bucketing coarsely partitions the data space, which are then scanned and filtered to produce
+the result set \cite{Grid-File,Flood}.
+R-Trees are popular for indexing spatial data,
+since they are capable of indexing regions and not only points \cite{R-Tree,R*-Tree}.
+For instance, PostGIS uses an R-Tree for indexing \cite{PostGIS}.
+However, as shown in the benchmarks, the R-Tree does not excel at 
+indexing points, especially in higher dimensions.
+
+Kd-Trees are popular for nearest neighbour queries 
+and can also perform range queries \cite{kd-Tree,ModernMDRQ}.
+Pi-Tree, with the round-robin projection policy, can be though of as a combination
+of a kd-Tree and an RMI \cite{Learned_Index}. 
+An extension of the kd-Tree, called the cracking kd-tree adaptively
+changes its structure while processing queries in order to improve 
+the performance for subsequent queries \cite{CrackingKD-Tree}.
+These approaches use only local policies and do not incorporate the global distribution
+of the data.
+
 
 \section{Background}
 
@@ -452,7 +487,7 @@ to the left of $p$.
 
 Since often the prediction $p$ is not too far away from the actual location
 of $q$, exponential search is a better option that binary search in the interval
-between start and end. %TODO cite other papers that use exponential search
+between start and end \cite{ALEX}.
 In our benchmarks we found that, the majority of the time,
 the actual location of the key is within $4$ indexes of the prediciton,
 making exponential search very fast. 
@@ -837,34 +872,6 @@ search speed to be 3 times slower.
   \caption{Average query time with various max fanout and page size}
   \label{combined-view}
 \end{figure}
-
-\section{Related Work}
-
-Both the original learned index work, and a followup SageDB
-proposed applying a learned based approach to multidimensional indexing,
-but neither provided details \cite{Learned_Index,SageDB}.
-Recently, a multidimensional leanred index strucuture called Flood has been proposed  \cite{Flood}. 
-Flood is most similar to a grid file
-\cite{Grid-File}, which partitions the data in a grid-like fashion.
-Flood has a global axis-aligned projection and partitioning scheme,
-while Pi-Tree projects and partitions at a per-node basis. 
- 
-Many other multidimensional indexing schemes have been proposed
-over the past decades. R-Trees are popular for indexing spatial data,
-since they are capable of indexing regions and not only points \cite{R-Tree,R*-Tree}.
-For instance, PostGIS uses an R-Tree for indexing \cite{PostGIS}.
-However, as shown in the benchmarks, the R-Tree does not excel at 
-indexing points, especially in higher dimensions.
-
-Kd-Trees are popular for nearest neighbour queries 
-and can also perform range queries \cite{kd-Tree,ModernMDRQ}.
-Pi-Tree, with the round-robin projection policy, can be though of as a combination
-of a kd-Tree and an RMI \cite{Learned_Index}. 
-An extension of the kd-Tree, called the cracking kd-tree adaptively
-changes its structure while processing queries in order to improve 
-the performance for subsequent queries \cite{CrackingKD-Tree}.
-These approaches use only local policies and do not incorporate the global distribution
-of the data.
 
 \section{Future Work}
 
