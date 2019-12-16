@@ -27,8 +27,9 @@
 \usepackage{amsmath}
 \usepackage{algorithm2e}
 
-\SetKwRepeat{Struct}{struct \{}{\}}%
-\newcommand{\Float}{\KwSty{float}}
+\settopmatter{printfolios=true}
+
+\SetKwRepeat{Struct}{struct \{}{\}}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -247,7 +248,7 @@ of an internal node.
     \KwSty{double} proj[]\;
     \KwSty{LinearModel} model\;
   }
-  \caption{PiTree Node Strucutre}
+  \caption{PiTree Node Structure}
   \label{PiTreeNode}
 \end{algorithm}
 
@@ -299,7 +300,7 @@ in which case the node is a leaf.
 First, use the projection policy to select a projection $proj$.
 Second, construct a linear CDF model $M$ from the projections of the range of datapoints
 the node indexes. If the node is leaf, stop. Otherwise,
-compute the fanout 
+compute the fanout
 \[
   f = \frac{end - start}{page\_size}.
 \]
@@ -324,7 +325,13 @@ the less even the partitions will be.
 
 Although intended for multidimensional range queries,
 PiTree can also handle point lookups. Understanding how point lookups
-work will make it easier to understand how range queries
+work will make it easier to understand how range queries.
+Beginning at the root, traverse down the tree until hitting a leaf.
+Once a leaf is hit, use its projection and linear model to approximate
+the index of the desired data item. The prediction might wrong,
+so a local search around the prediction could be necessary.
+To get the predicted index for a leaf node $n$ that indexes in $[start, end)$
+compute $M(proj \cdot p)$.
 
 \subsection{Multidimensional Range Search}
 
