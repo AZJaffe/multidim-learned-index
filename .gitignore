@@ -3,7 +3,7 @@ src/build/**
 report/*
 !report/report.tex
 !report/refs.bib
-
+!report/*.png
 __pycache__/
 *.py[cod]
 *$py.class
