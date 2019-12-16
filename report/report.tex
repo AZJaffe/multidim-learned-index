@@ -447,6 +447,37 @@ making exponential search very fast.
 
 \subsection{Multidimensional Range Queries}
 
+A multidimensional range query is interested in all points in the 
+dataset that are within a given hyperrectangle. For a $D$ dimensional PiTree,
+a range query is given as two arrays, $min$ and $max$, both of length $D$
+and whose result set is all datapoints $d$ in the $D$ dimensional dataset 
+that are within the hyperrectangle that has $min$ and $max$ as opposite vertices.
+To be precise, the result set of the query are all datapoints $d$
+that satisfy
+
+\begin{align*}
+  min[0] && \leq d[0] && \leq max[0] \\
+  min[1] && \leq d[1] && \leq max[1] \\
+  && \cdots && \\
+  min[D-1] && \leq d[D-1] && \leq max[D-1].
+\end{align*}
+
+Three steps are used to executed multidimensional range queries:
+\begin{enumerate}
+  \item Tree traversal. This step prunes subtrees that do not need to be searched.
+  \item Leaf Refinement. Prunes ranges of the leaf that does not need to be scanned.
+  Along with pruning subtrees, this limits the amount of scanning that needs to be done.
+  \item Leaf Scanning and Filtering. After refinement, scan every data point in
+  a range to see if it satisfies the query. This step adds 
+  data to the result set.
+\end{enumerate}
+
+Tree traversal is executed for every internal node visited in the search.
+Leaf refinement and scannaing and filtering executed for every leaf visited, since, unlike
+point queries, multiple leaves may be visited in a range query.
+
+\subsubsection{Tree traversal}
+
 \begin{algorithm}
   \caption{Range Query Tree Traversal}
   \label{rqInternal}
@@ -481,35 +512,51 @@ making exponential search very fast.
   \end{algorithmic}
 \end{algorithm}
 
-A multidimensional range query is interested in all points in the 
-dataset that are within a given hyperrectangle. To be precise,
-for a $D$ dimensional PiTree,
-a range query is given as two arrays, $min$ and $max$, both of length $D$
-and wants all datapoints $d$ in the $D$ dimensional dataset $S$
-that satisfy
+The goal of tree traversal is, for a given internal node, to identify a range of child nodes
+that could contain data points satisfying the query. To accomplish that,
+both the minimum projection and maximum projection
+over all points in the query rectangle $R$ are determined,
 
-\begin{align*}
-  min[0] && \leq d[0] && \leq max[0] \\
-  min[1] && \leq d[1] && \leq max[1] \\
-  && \cdots && \\
-  min[D-1] && \leq d[D-1] && \leq max[D-1]
+\begin{align*} 
+  \underset{r \in R}{min} \quad & r \cdot proj \\
+  \underset{r \in R}{max} \quad & r \cdot proj.
 \end{align*}
 
-Three steps are used to executed multidimensional range queries:
-\begin{enumerate}
-  \item Tree traversal. This step prunes subtrees that do not need to be searched.
-  \item Leaf Refinement. Prunes ranges of the leaf that does not need to be scanned.
-  Along with pruning subtrees, this limits the amount of scanning that needs to be done.
-  \item Leaf Scanning and Filtering. After refinement, scan every data point in
-  a range to see if it satisfies the query. This step adds 
-  data to the result set.
-\end{enumerate}
+Fortunately, since the projection is linear and the hyperrectangle
+is axis-aligned, this is an easy task. To compute the minimum for examlple,
+sum the products of $proj[i] \cdot min[i]$ or $proj[i] \cdot max[i]$ depending
+if $proj[i]$ is positive or negative. This prodedure takes $\mathcal{O}(D)$ time
+and is shown in Algorithm \ref{rqInternal}. The fact that PiTree uses linear projections
+makes solving this optimization problem trivial. Using a more
+complex projection function will result in a more
+difficult optimization problem to be solved in this step, increasing
+the run time of the traversal.
 
-Tree traversal is executed for every internal node visited in the search.
-Leaf refinement and scannaing and filtering executed for every leaf visited, since, unlike
-point queries, multiple leaves may be visited in a range query.
+\subsubsection{Leaf Refinement}
+Refinement narrows the search space of a leaf to a subrange. Since leaves can
+potentially be quite large, this step can greatly reduce the amount of 
+scanning and filtering that needs to be done. Recall
+that the data leaves index are sorted according to the leaf's projection.
 
-\subsubsection{Tree traversal}
+Like the tree traversal, the minimum and maximum projection of the query 
+rectangle $R$ are computed. 
+The left endpoint of the subrange of the leaf that needs to be scanned
+is the first index that has a data point whose projection is greater than or equal to the minimum
+projection of $R$. Symmetrically, the right endpoint of the subrange is the 
+largest index that is less than or equal to the maximum projection.
+Both of these endpoints are found using a similar approach to the local
+search done for point lookups. To find the left endpoint, for instance,
+use the model to predict the index of the location of the minimum projection.
+Then, either do exponential search either to the left or right of the prediction,
+depending on if the projection of the data point at the predicted index is
+larger or smaller than the minimum projection. Once both the left
+and right endpoints of the subrange are found, commence scanning and filtering.
+
+\subsubsection{Leaf Scanning and Filtering}
+
+Finally, scan the range of datapoints in the refined leaf interval.
+For each datapoint, simply check if it is inside the query hyperrectangle.
+If so, add it to the result set, otherwise continue scanning.
 
 \section{Evaluation}
 
