@@ -603,7 +603,7 @@ as follow.
     implemented in C++ from scratch and partition dimensions are selected in a round robin fashion.
     \item \textbf{R-Tree}. R-Tree is a depth-balanced tree that is widely used for spatial
     access method such as indexing geographical coordinates. We used a variant of R-Tree named
-    R*-Tree which is optimized for better query performance. A bulk loading method is also 
+    R*-Tree which is optimized for better query performance. A bulk loading method is
     implemented to support testing on large dataset. We benchmarked the R*-Tree implementation
     provided by libspatialindex.\cite{libSpatialIndex}
 
@@ -611,7 +611,7 @@ as follow.
 
 \subsection{Datasets}
 
-\begin{table}
+\begin{table}[h]
   \centering
   \begin{tabular}{|c|c|c|c|c|}
     \hline
@@ -649,6 +649,23 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
 \end{itemize}
 
 \subsection{Overall Performance}
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+          & full scan & KD-Tree & R-Tree & PiTree \\
+    \hline
+    random & 0 & 78125 & 7843 & 78 \\
+    \hline
+    normal & 0 & 78125 & 7843 & 91 \\
+    \hline
+    zipf & 0 & 78125 & 7843 & 0.1 \\
+    \hline 
+  \end{tabular}
+  \caption{Memory Usage KB}
+  \label{table:mem}
+\end{table}
 
 %% TODO update plot title
 \begin{figure*}[ht] 
@@ -693,12 +710,32 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
   All datasets has a dimension of 2 and a selectivity of 0.1}
 \end{figure*}
 
-\begin{figure}
+We first benchmark the building time, memory usage and query speed of PiTree against
+other indexing structures under 3 distributions. Figure 4 shows the average query time of
+PiTree is 2-3 times faster than the next closest indexing structure. PiTree is beated by
+KD-Tree under zipfian distribution where data is highly skewed and cannot be learned effectively
+by linear regression. A print of Pi-Tree shows that it tries to learn the whole distribution
+with a single node which results in large prediciton errors.
+
+In terms of memory usage (see Table 3), PiTree is able to reduce the memory usage by 2-3 order of magnitude
+since it significantly reduce the depth of the tree by utilitizing linear regression with fanout and
+page size. The size of PiTree various across different distributions as it will learn a reasonable number
+of node for a particular distribution. In Table 3, the size of PiTree is only 0.1KB for zipf
+distribution as it only create one node for the whole distribution. PiTree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
+faster than R-Tree as shown in Figure 5. Such building time is independent from distributions.
+
+Figure 6 shows the prediciton error distribution that helps to understand the performance
+difference of PiTree under different distributions. It's not suprising to see that PiTree
+models random uniform distribution best with an error bounded by 25 entries. The error under
+normal distribution is also reasonable and can be corrected within several steps of quadratic
+search. While the error for zipfian distribution goes beyond 300 entries and results in the
+search speed to be 3 times slower.
+
+\begin{figure}[h]
   \includegraphics[scale=0.6]{../figures/addition/prediction-error}
   \caption{Prediction error}
   \label{prediction-error}
 \end{figure}
-
 
 \subsection{Scalability}
 
