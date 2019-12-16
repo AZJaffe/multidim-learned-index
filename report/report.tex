@@ -739,6 +739,10 @@ search speed to be 3 times slower.
 
 \subsection{Scalability}
 
+To show the scalability of PiTree, we benchmark our indexing structures on different
+query selectivities and dimensions. The results show that our PiTree is robust to the
+scale of query selectivity and dimensions.
+
 \subsubsection{Query Selectivity}
 
 \begin{figure*}[ht] 
@@ -755,8 +759,17 @@ search speed to be 3 times slower.
   \end{minipage}%%
   \caption{Average query time under different selectivities. Left figure is tested
   on 2D random distribution while right figure is tested on 20D normal distribution.
-  Results of R*-Tree are excluded since they are 20 times slower than others.}
+  Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
+
+Figure 7 shows the benchmark results under different selectivities where we fixed the
+distribution as 2D random and 20D normal respectively. Results of R-Tree are excluded
+as they are 20 times slower.
+
+PiTree remains to be the fastest until selectivity goes more than 50\%. Under high selectivity,
+full scan outperformes others as indexing structures cannot prune effectively and scanning
+time becomes the dominant part in lookup. The performance of both PiTree and KD-Tree degrades
+as selectivity increasing, but KD-Tree is more vulnerable to selectivity changes.
 
 \subsubsection{Dimension}
 
@@ -775,10 +788,21 @@ search speed to be 3 times slower.
   \caption{Average query time under different dimensions. Left figure is tested
   on random distribution with 0.01 selectivity while right figure is tested on normal distribution
   with 0.5 selectivity.
-  Results of R*-Tree are excluded since they are 20 times slower than others.}
+  Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
 
+Figure 8 shows the benchmark results under different dimensions where we fixed the
+distribution as random distribution with 0.01 selectivity and normal distribution with
+0.5 selectivity. Results of R-Tree are omitted for similar reason as above.
+
+As number of dimensions increases, the performance of KD-Tree degrades dramatically as
+the depth of the tree grows quickly. The query time of both PiTree and full scan increases
+linearly along with dimensions while PiTree remains to be the fastest indexing structure.
+
 \subsection{Parameter Tuning}
+
+This section studies the influence parameters used in PiTree (i.e. max fanout and page size)
+which is intented to guide our future work on cost model.
 
 \subsubsection{Max Fanout}
 
@@ -803,6 +827,12 @@ search speed to be 3 times slower.
   with a fixed page size of 1000}
 \end{figure*}
 
+Figure 9 shows the statistics collected by changing the max fanout. Both average
+hit ratio and refinement ratio become stable after max fanout reaches 5000. While
+the average tree traverse latency, which represents the effectiveness of pruning,
+first reaches a sub-optimal point and start to increase together with the max fanout.
+This results in a higher average query time as shown in the right most picture of Figure 9.
+
 \subsubsection{Page Size}
 
 \begin{figure*}[ht] 
@@ -826,10 +856,23 @@ search speed to be 3 times slower.
   with a fixed max fanout of 500}
 \end{figure*}
 
+Figure 10 shows the statistics collected by changing the page size which shows
+a similar trend as changing the max fanout in Figure 9 since a better partition
+can be achieved by either increasing the page size or tuning the max fanout. As
+the page size increases, average scan latency also increases because there more
+records to scan within each page while average tree traverse latency decreases
+and eventually leads to a faster query speed.
+
 \subsubsection{Combined View}
 
+Figure 11 shows a combined view of the influence of page size and max fanout towards
+average query time. Although larger max fanout and page size yields better query speed
+in general, the optimal parameter is 50K page size and 1K max fanout which falls in
+the middle. Therefore, a better idea is to solve the parameters as an optimization
+problem as described in section 7.2.
+
 \begin{figure}
-  \includegraphics[scale=0.6]{../figures/parameter/avg-qtime-3D}
+  \includegraphics[scale=0.6]{../figures/parameter/avg-qtime-3D2}
   \caption{Average query time with various max fanout and page size}
   \label{combined-view}
 \end{figure}
