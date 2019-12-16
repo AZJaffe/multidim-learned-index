@@ -186,36 +186,82 @@ endpoint.
 \subsection{Motivation}
 % TODO diagram for single dimension learned index
 
-As described in Section 2, the main idea of single dimension learned index is to replace
+As described in Section 2, the main idea of single dimensional learned index is to replace
 the traditional indexing structure like B-Tree with a machine learning model that is able
 to learn the underlying data distribution. For point lookup, the learned index takes a key
 as input and predicts the position of the key in the data layout. The prediction does not
 necessarily to be exact as a quadratic search is introduced to correct the prediction error.
 
-Theoretically, the point lookup time for single dimension learned index equals to time
+Theoretically, the point lookup time for single dimensional learned index equals to time
 traversing the RMI plus time doing quadratic search. A model that can compute easily and predict
 accurately is the key to speed up point lookup. However, there is usually a trade off between
 model accuracy and computational cost in machine learning. For example, deep neural net is able
 to model complex data distribution but is also extremely expensive to compute. On the other hand,
 linear regression only involves one multiplication and one addition, but it only model linear
 distributed data effectively. Kraska adopted linear regression based RMI in their single dimension
-learned index mainly because the layout of single dimension data is trivial such that it can be
-effectively learned by linear models. However, such property may not hold for high dimension cases.
+learned index mainly because the layout of single dimensional data is trivial such that it can be
+effectively learned by linear models. However, such property may not hold for high dimensional cases.
 Therefore, we think it worth first studying the trade off between model accuracy and model
 computational cost. The result may guide us on the choice of models. 
 
 \subsection{Experiment}
 
-We implemented our single dimension learned index with a two-stage RMI as proposed in 
+We implemented our single dimensional learned index with a two-stage RMI as proposed in 
 Kraska's paper \cite{Learned_Index}. The two-stage RMI is configured to be able to accept
 any model that takes a key as input and generates a position as output such that we can
 plugin any machine learning model as needed. For simplicity, we only test on linear regression
 model and neural net with one hidden layer that has eight hidden nodes. A native B-Tree with no optimization is also implemented
 as the baseline. All indexing structures are implemented in Python as we do not care absolute
-performance in single dimension case as long as the comparison is fair and Python provides powerful
+performance in single dimensional case as long as the comparison is fair and Python provides powerful
 machine learning modules such as tensorflow. 
 
-% TODO add single dimensional result
+\begin{table}
+  \centering
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+     & BTree & Linear Model & Neural Net \\
+    \hline
+    Avg lookup time(ms) & 8e-6 & 6e-5 & 1e-4 \\
+    \hline 
+    Avg prediction error & 0 & 0.35\% & 0.22\% \\
+    \hline 
+    Build time(s) & 0.17 & 24.21 & 80.46 \\
+    \hline 
+  \end{tabular}
+  \caption{benchmark single dimensional learned index}
+  \label{table:1}
+\end{table}
+
+We benmark our indexing structures on a random uniformly distributed single dimensional
+dataset with 100 thousand data points. Each point is queried exactly once in the benchmark.
+All tests are conducted under the same environment as described in Section 5.1. Table 1 shows
+the benchmark results of BTree, linear model based RMI and neural net based RMI. Although
+BTree appears to be the best indexing structure across all evaluation metrics, we believe the
+overhead mainly comes from the tensorflow module as, later on when we finish implementing PiTree
+and linear regression in C++, the performance is suprisingly good.
+
+In terms of point lookup speed, neural net is about 20 times slower than linear regression model.
+This is as expected since we are using a neural net with 1 hidden layer and 8 hidden nodes which
+means for each prediction, neural net needs to do 16 linear regressions. Such high computational
+overhead also brings an improvement on prediction accuracy. Neural net reduces the prediction
+error (Average distance between prediction and actual position / Total data) by 0.13\%. However,
+such improvement is negligible as it can be easily corrected by quadratic search. Model prediction
+time becomes the dominant part in point lookup.
+
+\subsection{Lessons Learned}
+
+The success of single dimension learned index lies in the trivial data layout imposed by sorting.
+Mispredictions can be effectively corrected without much scan overhead. However, such feature may
+not exist in high dimensional cases. Points that are close in high dimensional space may be projected
+far from each other in single dimensional space. Therefore, it is important to carefully design a
+projection function which can preserve the relative position between points.
+
+Since high dimensional data is more complex to learn, the choice of machien learning model also
+worths discussion. Although neural net has been shown to be able to predict more accurately, its
+large computational overhead is unaffordable. The model used in RMI does not necessarily need to
+be very accurate but has to be easy to compute. Otherwise, traversing RMI will dominant the lookup.
+The rationale behind this is simple. When it takes too much effort to correct the prediction, a better
+approach is to simply leave the prediction as is while scanning everything in between. 
 
 \section{PiTree Design}
 
