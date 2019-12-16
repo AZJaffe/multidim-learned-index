@@ -177,12 +177,21 @@ Since RMI is a clustered index, it is capable of performing single dimensional r
 by simply finding the left endpoint range, then scanning to the right until reaching the right
 endpoint.
 
-% TODO diagram for RMI
+\begin{figure}
+  \includegraphics[scale=0.6]{../figures/RMI}
+  \caption{RMI\cite{Learned_Index}}
+  \label{RMI}
+\end{figure}
 
 \section{Single Dimensional Case}
 
 \subsection{Motivation}
-% TODO diagram for single dimension learned index
+
+\begin{figure}[h]
+  \includegraphics[scale=0.6]{../figures/single-dim-learned-index}
+  \caption{Single dimensional learned index \cite{Learned_Index}}
+  \label{single-dimensional-learned-index}
+\end{figure}
 
 As described in Section 2, the main idea of single dimensional learned index is to replace
 the traditional indexing structure like B-Tree with a machine learning model that is able
@@ -227,7 +236,7 @@ machine learning modules such as tensorflow.
     \hline 
   \end{tabular}
   \caption{benchmark single dimensional learned index}
-  \label{table:1}
+  \label{table:single-dimensional-learned-index-benchmark}
 \end{table}
 
 We benmark our indexing structures on a random uniformly distributed single dimensional
@@ -386,7 +395,7 @@ compute the fanout
 \]
 
 If $f > max\_fanout$, then set $f = max\_fanout$. This limits
-the node from being too wide.
+the node from being too wide. 
 Finally, partition the interval $[start, end)$ into $f$ partitions
 where the $i$-th partition is given by
 \[
@@ -596,15 +605,50 @@ as follow.
     access method such as indexing geographical coordinates. We used a variant of R-Tree named
     R*-Tree which is optimized for better query performance. A bulk loading method is also 
     implemented to support testing on large dataset. We benchmarked the R*-Tree implementation
-    provided by libspatialindex. % TODO add reference.
+    provided by libspatialindex.\cite{libSpatialIndex}
 
 \end{itemize}
 
 \subsection{Datasets}
 
-Due to time constraints, we evaluate indexing structures only on synthetic datasets.
+\begin{table}
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+          & records & queries & dimension & selectivity \\
+    \hline
+    random uniform & 1M & 1K & [2,5,10,15,20] & 0.0001 - 0.9 \\
+    \hline
+    normal & 1M & 1K & [2,5,10,15,20] & 0.0001 - 0.9 \\
+    \hline
+    zipf & 1M & 1K & 2 & 0.0001 - 0.1 \\
+    \hline 
+  \end{tabular}
+  \caption{Dataset and query charateristics}
+  \label{table:dataset}
+\end{table}
 
-\subsection{Performance}
+Due to time constraints, we evaluate indexing structures only on synthetic datasets.
+Table 2 summarizes the charateristics of datasets. Details are described as follow.
+\begin{itemize}
+  \item \textbf{Distributions}. We benchmark on three ditributions named random uniform
+  distribution, normal distribution and zipfian distribution. The first two distributions
+  widely exist in real world data pattern while zipfian distribution is commonly used in
+  linguistics, insurrance and the modeling of rare events.
+  \item \textbf{Records}. Data records are randomly sampled from corresponding distribution.
+  We limit the number of records to 1M for fast loading and testing.
+  \item \textbf{Queries}. For simplicity, each query selects on all dimensions. The start
+  point is randomly from the ditribution. And end point is selected in a way that the
+  percentage of records falls into the interval equals to corresponding selectivity.
+  \item \textbf{Dimension}. For each distribution, we generate records on dimension 2, 5, 10, 15,
+  and 20 to test the scalability across dimensions of our indexing structures.
+  \item \textbf{Selectivity}. Generating queries on high dimension with a fixed selectivity S is
+  a hard problem. However, since each column is independent, the problem can be reduced to generate
+  queries on each dimension with a selectivity of $S^{\frac{1}{D}}$. We generate queries with
+  selectivity 0.0001, 0.001, 0.01, 0.1, 0.5 and 0.9 to test the scalability across selectivity.
+\end{itemize}
+
+\subsection{Overall Performance}
 
 \subsection{Scalability}
 
@@ -617,6 +661,8 @@ Due to time constraints, we evaluate indexing structures only on synthetic datas
 \subsubsection{Max Fanout}
 
 \subsubsection{Page Size}
+
+\subsubsection{Combined View}
 
 \section{Related Work}
 
