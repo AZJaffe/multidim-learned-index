@@ -604,7 +604,7 @@ as follow.
     implemented in C++ from scratch and partition dimensions are selected in a round robin fashion.
     \item \textbf{R-Tree}. R-Tree is a depth-balanced tree that is widely used for spatial
     access method such as indexing geographical coordinates. We used a variant of R-Tree named
-    R*-Tree which is optimized for better query performance. A bulk loading method is also 
+    R*-Tree which is optimized for better query performance. A bulk loading method is
     implemented to support testing on large dataset. We benchmarked the R*-Tree implementation
     provided by libspatialindex.\cite{libSpatialIndex}
 
@@ -612,15 +612,15 @@ as follow.
 
 \subsection{Datasets}
 
-\begin{table}
+\begin{table}[h]
   \centering
   \begin{tabular}{|c|c|c|c|c|}
     \hline
           & records & queries & dimension & selectivity \\
     \hline
-    random uniform & 1M & 1K & [2,5,10,15,20] & 0.0001 - 0.9 \\
+    random & 1M & 1K & 2-20 & 0.0001 - 0.9 \\
     \hline
-    normal & 1M & 1K & [2,5,10,15,20] & 0.0001 - 0.9 \\
+    normal & 1M & 1K & 2-20 & 0.0001 - 0.9 \\
     \hline
     zipf & 1M & 1K & 2 & 0.0001 - 0.1 \\
     \hline 
@@ -651,19 +651,189 @@ Table 2 summarizes the charateristics of datasets. Details are described as foll
 
 \subsection{Overall Performance}
 
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+          & full scan & KD-Tree & R-Tree & PiTree \\
+    \hline
+    random & 0 & 78125 & 7843 & 78 \\
+    \hline
+    normal & 0 & 78125 & 7843 & 91 \\
+    \hline
+    zipf & 0 & 78125 & 7843 & 0.1 \\
+    \hline 
+  \end{tabular}
+  \caption{Memory Usage KB}
+  \label{table:mem}
+\end{table}
+
+%% TODO update plot title
+\begin{figure*}[ht] 
+  \label{overall-performance-qtime} 
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/random-qtime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/normal-qtime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/zipf-qtime} 
+    \vspace{4ex}
+  \end{minipage}
+  \caption{Average query time for random, normal and zipf distribution (from left to right). 
+  All datasets has a dimension of 2 and a selectivity of 0.1}
+\end{figure*}
+
+\begin{figure*}[ht] 
+  \label{overall-performance-btime} 
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/random-btime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/normal-btime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/zipf-btime} 
+    \vspace{4ex}
+  \end{minipage}
+  \caption{Average build time for random, normal and zipf distribution (from left to right). 
+  All datasets has a dimension of 2 and a selectivity of 0.1}
+\end{figure*}
+
+We first benchmark the building time, memory usage and query speed of PiTree against
+other indexing structures under 3 distributions. Figure 4 shows the average query time of
+PiTree is 2-3 times faster than the next closest indexing structure. PiTree is beated by
+KD-Tree under zipfian distribution where data is highly skewed and cannot be learned effectively
+by linear regression. A print of Pi-Tree shows that it tries to learn the whole distribution
+with a single node which results in large prediciton errors.
+
+In terms of memory usage (see Table 3), PiTree is able to reduce the memory usage by 2-3 order of magnitude
+since it significantly reduce the depth of the tree by utilitizing linear regression with fanout and
+page size. The size of PiTree various across different distributions as it will learn a reasonable number
+of node for a particular distribution. In Table 3, the size of PiTree is only 0.1KB for zipf
+distribution as it only create one node for the whole distribution. PiTree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
+faster than R-Tree as shown in Figure 5. Such building time is independent from distributions.
+
+Figure 6 shows the prediciton error distribution that helps to understand the performance
+difference of PiTree under different distributions. It's not suprising to see that PiTree
+models random uniform distribution best with an error bounded by 25 entries. The error under
+normal distribution is also reasonable and can be corrected within several steps of quadratic
+search. While the error for zipfian distribution goes beyond 300 entries and results in the
+search speed to be 3 times slower.
+
+\begin{figure}[h]
+  \includegraphics[scale=0.6]{../figures/addition/prediction-error}
+  \caption{Prediction error}
+  \label{prediction-error}
+\end{figure}
+
 \subsection{Scalability}
 
 \subsubsection{Query Selectivity}
 
+\begin{figure*}[ht] 
+  \label{scalability-selectivity} 
+  \begin{minipage}[b]{0.45\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/scalability/selectivity-random} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.45\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/scalability/selectivity-normal} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \caption{Average query time under different selectivities. Left figure is tested
+  on 2D random distribution while right figure is tested on 20D normal distribution.
+  Results of R*-Tree are excluded since they are 20 times slower than others.}
+\end{figure*}
+
 \subsubsection{Dimension}
+
+\begin{figure*}[ht] 
+  \label{scalability-dimension} 
+  \begin{minipage}[b]{0.45\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/scalability/dimension-random} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.45\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/scalability/dimension-normal} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \caption{Average query time under different dimensions. Left figure is tested
+  on random distribution with 0.01 selectivity while right figure is tested on normal distribution
+  with 0.5 selectivity.
+  Results of R*-Tree are excluded since they are 20 times slower than others.}
+\end{figure*}
 
 \subsection{Parameter Tuning}
 
 \subsubsection{Max Fanout}
 
+\begin{figure*}[ht] 
+  \label{parameter-fix-pageSize} 
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/parameter/fix-pagesize-hit} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/parameter/fix-pagesize-latency} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/parameter/fix-pagesize-qtime} 
+    \vspace{4ex}
+  \end{minipage}
+  \caption{Statistics collected by changing max fanout. Test on 2D random distribution
+  with a fixed page size of 1000}
+\end{figure*}
+
 \subsubsection{Page Size}
 
+\begin{figure*}[ht] 
+  \label{parameter-fix-fanout} 
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/parameter/fix-fanout-hit} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/parameter/fix-fanout-latency} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/parameter/fix-fanout-qtime} 
+    \vspace{4ex}
+  \end{minipage}
+  \caption{Statistics collected by changing page size. Test on 2D random distribution
+  with a fixed max fanout of 500}
+\end{figure*}
+
 \subsubsection{Combined View}
+
+\begin{figure}
+  \includegraphics[scale=0.6]{../figures/parameter/avg-qtime-3D}
+  \caption{Average query time with various max fanout and page size}
+  \label{combined-view}
+\end{figure}
 
 \section{Related Work}
 
