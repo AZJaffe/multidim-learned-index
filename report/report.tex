@@ -291,11 +291,11 @@ of an internal node.
 
 \subsection{Node Structure}
 
-% \begin{figure}
-%   \includegraphics[scale=0.5]{node_structure.png}
-%   \caption{PiTree Node Structure}
-%   \label{PiTreeNode}
-% \end{figure}
+\begin{figure}
+  % \includegraphics[scale=0.5]{node_structure.png}
+  \caption{PiTree Node Structure}
+  \label{PiTreeNode}
+\end{figure}
 
 
 Each node $n$ is responsible for indexing the range of the data array with indexes in $[start_n, end_n)$.
@@ -357,11 +357,12 @@ to determine which child node to route to.
     \State $n.children.append($
     \State \hskip1.69em \Call{BuildSubTree}{$childStart, i$}
     \State $)$
-    \EndIf
+    \State $childStart \gets i$
     \If{$n.children.length == n.fanout - 1$}
     \State $maxVal \gets \infty$
     \Else
     \State $maxVal \gets maxVal + 1/n.fanout$
+    \EndIf
     \EndIf
     \State $i \gets i+1$
     \EndWhile
@@ -374,7 +375,7 @@ to determine which child node to route to.
     \vskip1.0em
 
     \Procedure{Build}{}
-    \State \Return{BuildSubTree($0, data.length$)}
+    \State \Return{\Call{BuildSubTree}{$0, data.length$}}
     \EndProcedure
   \end{algorithmic}
 \end{algorithm}
@@ -411,16 +412,16 @@ the less even the partitions will be.
 
 \subsection{Point Queries}
 
-Although intended for multidimensional range queries,
+Although designed for multidimensional range queries,
 PiTree can also handle point lookups. Understanding how point lookups
-work will make it easier to understand how range queries.
-Suppose a point query is looking up data item with key $q$.
-Beginning at the root, traverse down the tree until hitting a leaf.
-Once a leaf is hit, use its projection and linear model to approximate
-the index of the desired data item. The prediction might be wrong,
-so a local search around the prediction could be necessary.
-The procedure of performing a local search to correct for the prediction error
-is also used for the range search.
+work will make it easier to understand how range queries are executed.
+A point query has two phases: a traversal down the tree, then a local search
+in a leaf.
+Unlike a range query, a point query will only follow one path down the tree to
+a leaf that might contain the key being searched for. Once the leaf is reached,
+the leaf's model is used to predict the location of the desired key. 
+Then, a local search around the neighbourhood of the prediction is performed
+to either find the key or confirm it is not in the dataset.
 
 Suppose a query is for a $D$ dimensional query $q$.
 At an internal node $n$, compute $c = \lfloor M(q \cdot proj) \cdot fanout \rfloor$
@@ -447,7 +448,8 @@ to the left of $p$.
 
 Since often the prediction $p$ is not too far away from the actual location
 of $q$, exponential search is a better option that binary search in the interval
-between start and end. In our benchmarks, we found that the majority of the time,
+between start and end. %TODO cite other papers that use exponential search
+In our benchmarks we found that, the majority of the time,
 the actual location of the key is within $4$ indexes of the prediciton,
 making exponential search very fast. 
 
@@ -455,36 +457,68 @@ making exponential search very fast.
 \subsection{Multidimensional Range Queries}
 
 \begin{algorithm}
-  \caption{Range Query on Internal Node}
-  \begin{algorithmic}[1]
-  \Procedure{RangeQuery}{$n,min[],max[],dimension$}
-  \If{$n.isLeaf()$}
-  \State \Call{rangeQueryLeaf}{n}
-  \State \Return{}
-  \EndIf
-  \State $minProj\gets 0$
-  \State $maxProj\gets 0$
-  \State $i\gets 0$
-  \While{$i < dimension$}
-  \State $minProduct\gets n.proj[i] \cdot min[i]$
-  \State $maxProduct\gets n.proj[i] \cdot max[i]$
-  \If{$n.proj[i] > 0$}
-  \State $minProj\gets minProj + minProduct$
-  \State $maxProj\gets maxProj + maxProduct$
-  \Else
-  \State $minProj\gets minProj + maxProduct$
-  \State $maxProj\gets maxProj + minProduct$
-  \EndIf
-  \State $i\gets i+1$
-  \EndWhile
-  \State $minChildIndex\gets n.model(minProj) \cdot n.fanout$
-  \State $maxChildIndex\gets n.model(maxProj) \cdot n.fanout$
-  \For{$i = minChildIndex; i \leq maxChild; i++$}
-  \State \Call{RangeQuery}{$n.child, min, max, dimension$}
-  \EndFor
-  \EndProcedure
+  \caption{Range Query Tree Traversal}
+  \label{rqInternal}
+    \begin{algorithmic}[1]
+      % TODO describe the input
+    \Procedure{RangeQuery}{$n,min[],max[]$}
+    \If{$n.isLeaf()$}
+    \State \Call{rangeQueryLeaf}{n}
+    \State \Return{}
+    \EndIf
+    \State $minProj\gets 0$
+    \State $maxProj\gets 0$
+    \State $i\gets 0$
+    \While{$i < D$}
+    \State $minProduct\gets n.proj[i] \cdot min[i]$
+    \State $maxProduct\gets n.proj[i] \cdot max[i]$
+    \If{$n.proj[i] > 0$}
+    \State $minProj\gets minProj + minProduct$
+    \State $maxProj\gets maxProj + maxProduct$
+    \Else
+    \State $minProj\gets minProj + maxProduct$
+    \State $maxProj\gets maxProj + minProduct$
+    \EndIf
+    \State $i\gets i+1$
+    \EndWhile
+    \State $minChild \gets n.model(minProj) \cdot n.fanout$
+    \State $maxChild \gets n.model(maxProj) \cdot n.fanout$
+    \For{$i = minChild; i \leq maxChild; i++$}
+    \State \Call{RangeQuery}{$n.children[i], min, max$}
+    \EndFor
+    \EndProcedure
   \end{algorithmic}
-  \end{algorithm}
+\end{algorithm}
+
+A multidimensional range query is interested in all points in the 
+dataset that are within a given hyperrectangle. To be precise,
+for a $D$ dimensional PiTree,
+a range query is given as two arrays, $min$ and $max$, both of length $D$
+and wants all datapoints $d$ in the $D$ dimensional dataset $S$
+that satisfy
+
+\begin{align*}
+  min[0] && \leq d[0] && \leq max[0] \\
+  min[1] && \leq d[1] && \leq max[1] \\
+  && \cdots && \\
+  min[D-1] && \leq d[D-1] && \leq max[D-1]
+\end{align*}
+
+Three steps are used to executed multidimensional range queries:
+\begin{enumerate}
+  \item Tree traversal. This step prunes subtrees that do not need to be searched.
+  \item Leaf Refinement. Prunes ranges of the leaf that does not need to be scanned.
+  Along with pruning subtrees, this limits the amount of scanning that needs to be done.
+  \item Leaf Scanning and Filtering. After refinement, scan every data point in
+  a range to see if it satisfies the query. This step adds 
+  data to the result set.
+\end{enumerate}
+
+Tree traversal is executed for every internal node visited in the search.
+Leaf refinement and scannaing and filtering executed for every leaf visited, since, unlike
+point queries, multiple leaves may be visited in a range query.
+
+\subsubsection{Tree traversal}
 
 \section{Evaluation}
 
