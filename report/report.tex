@@ -25,11 +25,10 @@
 \documentclass[sigconf,10pt]{acmart}
 
 \usepackage{amsmath}
-\usepackage{algorithm2e}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
 
 \settopmatter{printfolios=true}
-
-\SetKwRepeat{Struct}{struct \{}{\}}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -72,8 +71,6 @@
   \state{Ontario}
 }
 
-
-%% TODO
 \author{Xiyeng Feng}
 \email{x74feng@uwaterloo.ca}
 \affiliation{%
@@ -285,18 +282,11 @@ of an internal node.
 
 \subsection{Node Structure}
 
-\begin{algorithm}[t]
-  \SetAlgoNoLine\PrintSemicolon
-  \Struct{Node}{
-    \KwSty{int} start,end\; 
-    \KwSty{int} fanout\;
-    \KwSty{Node *} children[]\;
-    \KwSty{double} proj[]\;
-    \KwSty{LinearModel} model\;
-  }
+\begin{figure}
+  \includegraphics[scale=0.5]{node_structure.png}
   \caption{PiTree Node Structure}
   \label{PiTreeNode}
-\end{algorithm}
+\end{figure}
 
 
 Each node $n$ is responsible for indexing the range of the data array with indexes in $[start_n, end_n)$.
@@ -338,14 +328,57 @@ to determine which child node to route to.
 
 \subsection{Constructing The Tree}
 
+\begin{algorithm}
+  \caption{Building A PiTree}
+  \begin{algorithmic}[1]
+    \Procedure{BuildSubTree}{$start,end$}
+    \State $n\gets new Node()$
+    \State $n.proj \gets selectProjection(depth)$
+    \State $n.model\gets trainLinearModel(start,end)$
+    \If{$end-start\geq pageSize$}
+    \State \Return{$n$}\Comment{$n$ is a leaf}
+    \EndIf
+    \State $n.fanout\gets (start-end)/pageSize$
+    \State $maxVal\gets 1/n.Fanout$
+    \State $childStart\gets start$
+    \State $i\gets start$
+    \While{$i < end$}
+    \State $p\gets n.proj(data[i])$
+    \If{$p\geq maxVal$}
+    \State $n.children.append($
+    \State \hskip1.69em \Call{BuildSubTree}{$childStart, i$}
+    \State $)$
+    \EndIf
+    \If{$n.children.length == n.fanout - 1$}
+    \State $maxVal \gets \infty$
+    \Else
+    \State $maxVal \gets maxVal + 1/n.fanout$
+    \EndIf
+    \State $i \gets i+1$
+    \EndWhile
+    \State $n.children.append($
+    \State \hskip1.69em \Call{BuildSubTree}{$childStart, end$}
+    \State $)$
+    \State \Return{$n$} \Comment{$n$ is an internal node}
+    \EndProcedure
+
+    \vskip1.0em
+
+    \Procedure{Build}{}
+    \State \Return{BuildSubTree($0, data.length$)}
+    \EndProcedure
+  \end{algorithmic}
+\end{algorithm}
+
 A PiTree is constructed from a static dataset in bulk loading process.
 The tree is constructed recursively, with each node having a start and 
 end index. The root is constructed with $start=0$ and $end=N$ where $N$
 is the size of dataset. The base case is when $end - start \leq pageSize$,
 in which case the node is a leaf.
 First, use the projection policy to select a projection $proj$.
-Second, construct a linear CDF model $M$ from the projections of the range of datapoints
-the node indexes. If the node is leaf, stop. Otherwise,
+Second, sort the data in the range $[start, end)$ using the projection.
+Third, train a linear regresstion CDF model $M$ from the projections of the range of datapoints
+the node indexes that minimize the least squares error. If the node is leaf, stop. Otherwise,
 compute the fanout
 \[
   f = \frac{end - start}{page\_size}.
@@ -353,33 +386,64 @@ compute the fanout
 
 If $f > max\_fanout$, then set $f = max\_fanout$. This limits
 the node from being too wide.
-Then partition the interval $[start, end)$ into $f$ partitions
-where the $i$-th partition 
+Finally, partition the interval $[start, end)$ into $f$ partitions
+where the $i$-th partition is given by
 \[
   P_i = \left\{j \in [start, end): \frac{i}{f} \leq M(proj \cdot d[j]) < \frac{i+1}{f} \right\}.
 \]
 
-Then the endpoints of each partition are used to recursively initialize child nodes.
+The endpoints of each partition are used to recursively initialize child nodes.
 If the model accurately represents the CDF of the data, which would be the case
-if the data is nearly uniformly distributed under the projection,
+if the data is approximately uniformly distributed under the projection,
 it will be the case that each partition will have approximately the same number of
 points $\frac{1}{f}$. The further from uniform the distribution becomes,
 the less even the partitions will be.
 
 
-\subsection{Point Search}
+\subsection{Point Queries}
 
 Although intended for multidimensional range queries,
 PiTree can also handle point lookups. Understanding how point lookups
 work will make it easier to understand how range queries.
+Suppose a point query is looking up data item with key $q$.
 Beginning at the root, traverse down the tree until hitting a leaf.
 Once a leaf is hit, use its projection and linear model to approximate
-the index of the desired data item. The prediction might wrong,
+the index of the desired data item. The prediction might be wrong,
 so a local search around the prediction could be necessary.
-To get the predicted index for a leaf node $n$ that indexes in $[start, end)$
-compute $M(proj \cdot p)$.
+The procedure of performing a local search to correct for the prediction error
+is also used for the range search.
 
-\subsection{Multidimensional Range Search}
+Suppose a query is for a $D$ dimensional query $q$.
+At an internal node $n$, compute $c = \lfloor M(q \cdot proj) \cdot fanout \rfloor$
+and recursively search for $q$ in the child $n.child[c]$.
+At first, it may seem surprising that only child $c$ needs to be searched
+since we're relying on the model to select the child node to search.
+However, by the way PiTree is constructed, the model is never wrong.
+If $q$ were to be in the dataset,
+it will be indexed by child $c$. Looking up the proper child node thus takes only
+$\Theta(D)$ time, to compute the projection. Compared to a B-Tree, whose
+time to select a child node is $O(\log(f))$ for fanout $f$. This means
+searches are not slowed down by internal nodes with high fanout.
+
+At a leaf node $n$ that indexes in $[start, end)$, start by computing the predicted
+index
+$p = \lfloor M(q \cdot proj) \cdot (end - start) \rfloor$, where $M$ is the CDF model for node $n$.
+If $d[p] = q$, then we've found the result.
+Otherwise, suppose that $d[p] < q$.
+In this case, perform an exponential search to the right starting at $p$,
+until either $p$ is found or an index $i$ is found such that 
+$d[i] \cdot proj < p < d[i+1] \cdot proj$, in which case $p$ is not in the dataset.
+The case where $d[p] > q$ is symmetrical and involves an exponential search
+to the left of $p$.
+
+Since often the prediction $p$ is not too far away from the actual location
+of $q$, exponential search is a better option that binary search in the interval
+between start and end. In our benchmarks, we found that the majority of the time,
+the actual location of the key is within $4$ indexes of the prediciton,
+making exponential search very fast. 
+
+
+\subsection{Multidimensional Range Queries}
 
 \section{Evaluation}
 
