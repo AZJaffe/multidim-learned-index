@@ -403,11 +403,22 @@ as follow.
     the worst lookup time when the range queries are small. On the other hand, 
     when range queries are large enough that indexing structures are not able to 
     prune effectively, full scan should show a competitive performance.
-    \item \textbf{KD-Tree}. KD-Tree is essentially a binary search tree 
-    \item \textbf{R-Tree}
+    \item \textbf{KD-Tree}. KD-Tree is essentially a binary search tree that organizes
+    points by partioning the K dimensional space. A non-leaf node will partition 
+    the space into two parts and points are assigned accordingly. KD-Tree is easy to 
+    implement but its effectiveness degrades for higher number of dimensions. Our KD-Tree is
+    implemented in C++ from scratch and partition dimensions are selected in a round robin fashion.
+    \item \textbf{R-Tree}. R-Tree is a depth-balanced tree that is widely used for spatial
+    access method such as indexing geographical coordinates. We used a variant of R-Tree named
+    R*-Tree which is optimized for better query performance. A bulk loading method is also 
+    implemented to support testing on large dataset. We benchmarked the R*-Tree implementation
+    provided by libspatialindex. % TODO add reference.
+
 \end{itemize}
 
 \subsection{Datasets}
+
+Due to time constraints, we evaluate indexing structures only on synthetic datasets.
 
 \subsection{Performance}
 
