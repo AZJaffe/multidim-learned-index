@@ -624,25 +624,18 @@ We compare Pi-Tree to three other widely used multidimensional range query appro
 such as the Full Scan, KD-Tree and R-Tree. Details about these baselines are listed 
 as follow. 
 \begin{itemize}
-    \item \textbf{Full Scan}. Full Scan visits every point in the dataset and 
-    compare every dimension appears in the query. This method is expected to have 
-    the worst lookup time when the range queries are small. On the other hand, 
-    when range queries are large enough that indexing structures are not able to 
-    prune effectively, full scan should show a competitive performance.
+    \item \textbf{Full Scan}. Full Scan checks every point in the dataset.
     \item \textbf{KD-Tree}. KD-Tree is essentially a binary search tree that organizes
-    points by partioning the K dimensional space. A non-leaf node will partition 
+    points by partitioning the $D$ dimensional space. A non-leaf node will partition 
     the space into two parts and points are assigned accordingly. KD-Tree is easy to 
     implement but its effectiveness degrades for higher number of dimensions. Our KD-Tree is
     implemented in C++ from scratch and partition dimensions are selected in a round robin fashion.
     \item \textbf{R-Tree}. R-Tree is a depth-balanced tree that is widely used for spatial
     access method such as indexing geographical coordinates. We used a variant of R-Tree named
-    R*-Tree which is optimized for better query performance. A bulk loading method is
-    implemented to support testing on large dataset. We benchmarked the R*-Tree implementation
+    R*-Tree which is optimized for better query performance. We benchmarked the R*-Tree implementation
     provided by libspatialindex.\cite{libSpatialIndex}
-
 \end{itemize}
 
-%% TODO update plot title
 \begin{figure*}[t] 
   \label{overall-performance-qtime} 
   \begin{minipage}[b]{0.33\linewidth}
@@ -705,23 +698,20 @@ as follow.
 \end{table}
 
 Due to time constraints, we evaluate indexing structures only on synthetic datasets.
-Table 2 summarizes the characteristics of datasets. Details are described as follow.
+Table 2 summarizes the characteristics of datasets.
 \begin{itemize}
-  \item \textbf{Distributions}. We benchmark on three distributions, specifically the random uniform
-  distribution, normal distribution and the zipfian distribution. The first two distributions
-  widely exist in real world data patterns whereas zipfian distribution is commonly used in
-  linguistics, insurance and the modeling of rare events.
+  \item \textbf{Distributions}. Three distribtuions used in the benchmarks are uniform, normal,
+  and Zipfian.
   \item \textbf{Records}. Data records are randomly sampled from the corresponding distribution.
   We limit the number of records to 1M for fast loading and testing.
-  \item \textbf{Queries}. For simplicity, each query selects on all dimensions. The start
-  point is randomly from the distribution. An end point is selected in a way that the
-  percentage of records falls into the interval equals to corresponding selectivity.
+  \item \textbf{Queries}. The min point
+  is sampled uniformly from the distribution. The max point is selected so as to achieve
+  the desired selectivity.
   \item \textbf{Dimension}. For each distribution, we generate records on dimension 2, 5, 10, 15,
-  and 20 to test the scalability across dimensions of our indexing structures.
-  \item \textbf{Selectivity}. Generating queries on high dimension with a fixed selectivity S is
-  a hard problem. However, since each column is independent, the problem can be reduced to generate
-  queries on each dimension with a selectivity of $S^{\frac{1}{D}}$. We generate queries with
-  selectivity 0.0001, 0.001, 0.01, 0.1, 0.5 and 0.9 to test the scalability across selectivity.
+  and 20 to test the scalability across dimensions.
+  \item \textbf{Selectivity}. To generate queries with a desired selectivity $S$, assuming each column is independent,
+  we pick the range of each dimension to have selectivity $S^{\frac{1}{D}}$. We generate queries with
+  selectivity $0.0001, 0.001, 0.01, 0.1, 0.5$ and $0.9$ to test the scalability across selectivity.
 \end{itemize}
 
 \subsection{Overall Performance}
@@ -739,7 +729,7 @@ Table 2 summarizes the characteristics of datasets. Details are described as fol
     zipf & 0 & 78125 & 7843 & 0.1 \\
     \hline 
   \end{tabular}
-  \caption{Memory Usage KB}
+  \caption{Memory Usage (KB)}
   \label{table:mem}
 \end{table}
 
@@ -762,7 +752,7 @@ Table 2 summarizes the characteristics of datasets. Details are described as fol
     \vspace{4ex}
   \end{minipage}%%
   \caption{Average query time under different selectivities. Left figure is tested
-  on 2D random distribution while right figure is tested on 20D normal distribution.
+  on $2$-D uniform distribution while right figure is tested on $20$-D normal distribution.
   Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
 
@@ -779,30 +769,31 @@ Table 2 summarizes the characteristics of datasets. Details are described as fol
     \vspace{4ex}
   \end{minipage}%%
   \caption{Average query time under different dimensions. Left figure is tested
-  on random distribution with 0.01 selectivity while right figure is tested on normal distribution
+  on a uniform distribution with 0.01 selectivity while right figure is tested on normal distribution
   with 0.5 selectivity.
   Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
 
 We first benchmark the building time, memory usage and query speed of Pi-Tree against
-other indexing structures under 3 distributions. Figure 4 shows the average query time of
+other indexing structures under three distributions. Figure 4 shows the average query time of
 Pi-Tree is 2-3 times faster than the next closest indexing structure. Pi-Tree is surpassed by
 KD-Tree under zipfian distribution where data is highly skewed and cannot be learned effectively
-by linear regression. A print of Pi-Tree shows that it tries to learn the whole distribution
-with a single node which results in large prediction errors.
+by linear regression.
 
-In terms of memory usage (see Table 3), Pi-Tree is able to reduce the memory usage by 2-3 order of magnitude
-since it significantly reduce the depth of the tree by utilitizing linear regression with fanout and
-page size. The size of Pi-Tree various across different distributions as it will learn a reasonable number
-of node for a particular distribution. In Table 3, the size of Pi-Tree is only 0.1KB for zipf
-distribution as it only create one node for the whole distribution. Pi-Tree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
-faster than R-Tree as shown in Figure 5. Such building time is independent from distributions.
+In terms of memory usage (see Table 3), Pi-Tree is able to reduce the memory usage by 2-3 orders of magnitude
+since it significantly reduce the depth of the tree. The size of Pi-Tree various across different distributions
+as it will learn a reasonable number
+of nodes required for a particular distribution. In Table 3, the size of Pi-Tree is only 0.1KB for zipf
+distribution due to a bug causing it to only create one node for the whole distribution. 
+With the bug resolved, we expect Pi-Tree to be deeper in areas of the distribution that are denser.
+Pi-Tree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
+faster than R-Tree as shown in Figure 5. Such building time is independent from the distribution.
 
-Figure 6 shows the prediciton error distribution that helps to understand the performance
-difference of Pi-Tree under different distributions. It's not suprising to see that Pi-Tree
+Figure 6 shows the distribution of the prediction error, which helps to understand the performance
+difference of Pi-Tree under different data distributions. It's not suprising to see that Pi-Tree
 models random uniform distribution best with an error bounded by 25 entries. The error under
-normal distribution is also reasonable and can be corrected within several steps of local
-search. While the error for zipfian distribution goes beyond 300 entries and results in the
+normal distribution is also reasonable and can be corrected within several steps of exponential search.
+While the error for zipfian distribution goes beyond 300 entries and results in the
 search speed to be 3 times slower.
 
 \begin{figure*}[ht] 
@@ -822,7 +813,7 @@ search speed to be 3 times slower.
     \includegraphics[width=.8\linewidth]{../figures/parameter/fix-pagesize-qtime} 
     \vspace{4ex}
   \end{minipage}
-  \caption{Statistics collected by changing max fanout. Test on 2D random distribution
+  \caption{Statistics collected by changing max fanout. Test on 2-$D$ uniform distribution
   with a fixed page size of 1000}
 \end{figure*}
 
@@ -856,12 +847,12 @@ scale of query selectivity and dimensions.
 \subsubsection{Query Selectivity}
 
 Figure 7 shows the benchmark results under different selectivities where we fixed the
-distribution as 2D random and 20D normal respectively. Results of R-Tree are excluded
+distribution as 2-$D$ uniform and 20-$D$ normal respectively. Results of R-Tree are excluded
 as they are 20 times slower.
 
-Pi-Tree remains to be the fastest until selectivity goes more than 50\%. Under high selectivity,
-full scan outperformes others as indexing structures cannot prune effectively and scanning
-time becomes the dominant part in lookup. The performance of both Pi-Tree and KD-Tree degrades
+Pi-Tree remains to be the fastest until selectivity is larged than 50\%. Under high selectivity,
+full scan outperformes others as the indexing structures prune much data and only act as
+increased overhead. The performance of both Pi-Tree and KD-Tree degrades
 as selectivity increasing, but KD-Tree is more vulnerable to selectivity changes.
 
 \subsubsection{Dimension}
@@ -883,7 +874,7 @@ which is intented to guide our future work on cost model.
 
 Figure 9 shows the statistics collected by changing the max fanout. Both average
 hit ratio and refinement ratio become stable after max fanout reaches 5000. While
-the average tree traverse latency, which represents the effectiveness of pruning,
+the average tree traverse latency, which represents the time to prune subtrees,
 first reaches a sub-optimal point and start to increase together with the max fanout.
 This results in a higher average query time as shown in the right most picture of Figure 9.
 
