@@ -303,7 +303,7 @@ multidimensional range queries. Currently, only complete range queries are suppo
 Partial range queries are possible to support but are not included in this report. 
 Pi-Tree indexes a static dataset and does not support dynamic inserts, deletes,
 although we believe it is possible to extend Pi-Tree to allow dynamic inserts and deletes,
-in the same way ALEX built upon the original RMI structure to achieve this functionality. % CITE ALEX
+in the same way ALEX built upon the original RMI structure to achieve this functionality \cite{ALEX}.
 
 The datapoints, all of dimension $D$, are stored as one contiguous in-memory array.
 Nodes in Pi-Tree are comprised of a projection onto a single dimension, which it uses to
@@ -413,7 +413,7 @@ is the size of dataset. The base case is when $end - start \leq pageSize$,
 in which case the node is a leaf.
 First, use the projection policy to select a projection $proj$.
 Second, sort the data in the range $[start, end)$ using the projection.
-Third, train a linear regresstion CDF model $M$ from the projections of the range of datapoints
+Third, train a linear regression CDF model $M$ from the projections of the range of datapoints
 the node indexes that minimize the least squares error. If the node is leaf, stop. Otherwise,
 compute the fanout
 \[
@@ -606,7 +606,7 @@ Overall the results show that:
     \item Pi-Tree can reduce the memory usage by order of magnitude compared with
     R-Tree and KD-Tree.
     \item Pi-Tree is robust to the change of dimensions and selectivity. Its performance
-    degrades gracefullly compared with other indexing structures and remains to be
+    degrades gracefully compared with other indexing structures and remains to be
     the fastest method.
 \end{itemize}
 
