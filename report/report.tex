@@ -88,9 +88,11 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  This is my abstract, so it is not concrete yet. It cannot yet be used
-  in the constructions of domiciles for human habitation.
-  % TODO
+  We present Pi-Tree, a simple learned multidimensional index structure.
+  Pi-Tree uses a policy to select a projection from a multidimensional data space
+  to a single dimension on a per node basis which it uses to partition the dataset.
+  In many cases, Pi-Tree outperforms competing multidimensional data structures,
+  in particular when the dataset is uniformly distributed.
 \end{abstract}
 
 
@@ -127,7 +129,6 @@ from the original learned index paper to a multidimensional space.
 Our main contributions are:
 \begin{enumerate}
   \item The design and implementation from scratch of the Pi-Tree multidimensional learned index in C++
-  % TODO highlight benchmark results
   \item A thorough evaluation of Pi-Tree against an R*-Tree and kd-Tree 
   \item A discussion of future work to improve the performance of Pi-Tree
 \end{enumerate}
@@ -517,7 +518,6 @@ point queries, multiple leaves may be visited in a range query.
   \caption{Range Query Tree Traversal}
   \label{rqInternal}
     \begin{algorithmic}[1]
-      % TODO describe the input
     \Procedure{RangeQuery}{$n,min[],max[]$}
     \If{$n.isLeaf()$}
     \State \Call{rangeQueryLeaf}{n}
@@ -914,7 +914,7 @@ Incorporating off-axis projection could theoretically better model
 correlated dimensions.
 
 One policy that could produce off-axis projections is using
-Principal Component Analysis (PCA). The idea would be to 
+Principal Component Analysis. The idea would be to 
 pick the first princiapl component which is the projection that captures
 the maximum possible variance in the data.
 
@@ -926,26 +926,18 @@ fanout of each node.
 
 \section{Conclusion}
 
-This paper has presented the design of a simple,
+This paper has presented the design of Pi-Tree, a simple,
 novel, performant, multidimensional learned index strucutre.
+Pi-Tree successfully extends the ideas of the original learned index
+structure to multiple dimensions to outperform a kd-Tree and R-Tree.
 
-%%
-%% The acknowledgments section is defined using the "acks" environment
-%% (and NOT an unnumbered section). This ensures the proper
-%% identification of the section in the article metadata, and the
-%% consistent spelling of the heading.
 \begin{acks}
 Adam wants to thank his girlfriend Akshaya for always being there and
 helping out.
 \end{acks}
 
-%%
-%% The next two lines define the bibliography style to be used, and
-%% the bibliography file.
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{refs.bib}
 
-
 \end{document}
 \endinput
-%%
