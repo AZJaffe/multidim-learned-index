@@ -102,8 +102,7 @@
 \section{Introduction}
 
 Analytical database engines store and process queries on large volumes of data.
-Typically, in modern systems, this data is stored in memory. %TODO CITE
-These systems scan and filter their data to execute queries.
+These systems scan and filter large volumes of data to execute queries.
 Multidimensional range queries are a type of query defined by 
 intervals in all or some of the columns and are interested in all data items
 that are within all the given intervals. Multidimensional range queries that do not specify
@@ -117,19 +116,9 @@ With the explosion of analytical data comes the need to answer multidimensional 
 quickly on large datasets. Multiple approaches have been taken to perform better than
 fully scanning the dataset, which is quite wasteful if selectivity
 of the query is low. If queries are very selective in one column, then sorting the data
-according to that column and building a B-Tree can be a good approach. % TODO CITE
+according to that column and building a B-Tree on that column can be a good approach. 
 Another approach is to use a multidimensional index, which uses data from multiple dimensions
-in its structure. Space filling curves, tree-based structures, and bucketing are three popular approaches
-to build multidimensional indexes. Space filling curves, such as the Z-order or the Hilbert curve,
-can be used to define an order on $n$-dimensional space, which can then be indexed using 
-single-dimensional methods. % TODO cite Hilbert and Z-order
-A complication of this approach is that points that are close in
-$n$-dimensional space are not necessarily close together on the curve. % TODO Cite this
-Tree-based structures can be thought of as the multidimensional extension of B-Trees.
-There are numerous methods that take this approach, such as R-Trees and kd-trees. % TODO Cite
-Bucketing coarsely partitions the data space, which are then scanned and filtered to produce
-the result set.
-% TODO cite VA-file, grid file, locality sensitive hashing
+in its structure. 
 
 In this paper we present Pi-Tree, a learned multidimensional index designed for
 in-memory multidimensional range queries capable of indexing
@@ -137,13 +126,59 @@ data of arbitrary dimension. PiTree extends in a natural way the recursive model
 from the original learned index paper to a multidimensional space.
 Our main contributions are:
 \begin{enumerate}
-  \item The design and implementation from scratch of the Pi-Tree multidimensaional learned index in C++
+  \item The design and implementation from scratch of the Pi-Tree multidimensional learned index in C++
   % TODO highlight benchmark results
   \item A thorough evaluation of Pi-Tree against an R*-Tree and kd-Tree 
   \item A discussion of future work to improve the performance of Pi-Tree
 \end{enumerate}
 
-The rest of this report will be structured as follows. % TODO
+The rest of this report will be structured as follows.
+Section 2 covers related work. Section 3 and 4 describes
+work done on learned indices in the single dimensional case.
+Section 5 describes the design and implementation
+of Pi-Tree. Section 6 highlights our benchmarking results. Section 7
+outlines potential future work to be done.
+
+\section{Related Work}
+
+Both the original learned index work, and SageDB
+proposed applying a learned based approach to multidimensional indexing,
+but neither provided details \cite{Learned_Index,SageDB}.
+Recently, a multidimensional leanred index strucuture called Flood has been proposed  \cite{Flood}. 
+Flood is most similar to a grid file
+\cite{Grid-File}, which partitions the data in a grid-like fashion.
+Flood has a global axis-aligned projection and partitioning scheme,
+while Pi-Tree projects and partitions at a per-node basis. 
+
+Many other multidimensional indexing schemes have been proposed
+over the past decades. Three main approaches have been taken:
+space filling curves, tree-based structures, and bucketing are three popular approaches
+to build multidimensional indexes. Space filling curves, such as the Z-order,
+can be used to define an order on $n$-dimensional space, which can then be indexed using 
+single-dimensional methods \cite{UB-Tree}. 
+A complication of this approach is that points that are close in
+n-dimensional space are not necessarily close together on the curve.
+Tree-based structures can be though of as the multidimensional extension of B-Trees.
+There are a variety methods that take this approach, such as R-Trees, kd-trees
+\cite{R-Tree,R*-Tree,kd-Tree}.
+Bucketing coarsely partitions the data space, which are then scanned and filtered to produce
+the result set \cite{Grid-File,Flood}.
+R-Trees are popular for indexing spatial data,
+since they are capable of indexing regions and not only points \cite{R-Tree,R*-Tree}.
+For instance, PostGIS uses an R-Tree for indexing \cite{PostGIS}.
+However, as shown in the benchmarks, the R-Tree does not excel at 
+indexing points, especially in higher dimensions.
+
+Kd-Trees are popular for nearest neighbour queries 
+and can also perform range queries \cite{kd-Tree,ModernMDRQ}.
+Pi-Tree, with the round-robin projection policy, can be though of as a combination
+of a kd-Tree and an RMI \cite{Learned_Index}. 
+An extension of the kd-Tree, called the cracking kd-tree adaptively
+changes its structure while processing queries in order to improve 
+the performance for subsequent queries \cite{CrackingKD-Tree}.
+These approaches use only local policies and do not incorporate the global distribution
+of the data.
+
 
 \section{Background}
 
@@ -295,8 +330,7 @@ of an internal node.
 \subsection{Node Structure}
 
 \begin{figure}
-  % TODO include this
-  % \includegraphics[scale=0.5]{node_structure.png}
+  \includegraphics[scale=0.5]{node_structure.png}
   \caption{Pi-Tree Node Structure}
   \label{Pi-TreeNode}
 \end{figure}
@@ -452,7 +486,7 @@ to the left of $p$.
 
 Since often the prediction $p$ is not too far away from the actual location
 of $q$, exponential search is a better option that binary search in the interval
-between start and end. %TODO cite other papers that use exponential search
+between start and end \cite{ALEX}.
 In our benchmarks we found that, the majority of the time,
 the actual location of the key is within $4$ indexes of the prediction,
 making exponential search very fast. 
@@ -743,6 +777,10 @@ search speed to be 3 times slower.
 
 \subsection{Scalability}
 
+To show the scalability of PiTree, we benchmark our indexing structures on different
+query selectivities and dimensions. The results show that our PiTree is robust to the
+scale of query selectivity and dimensions.
+
 \subsubsection{Query Selectivity}
 
 \begin{figure*}[ht] 
@@ -759,8 +797,17 @@ search speed to be 3 times slower.
   \end{minipage}%%
   \caption{Average query time under different selectivities. Left figure is tested
   on 2D random distribution while right figure is tested on 20D normal distribution.
-  Results of R*-Tree are excluded since they are 20 times slower than others.}
+  Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
+
+Figure 7 shows the benchmark results under different selectivities where we fixed the
+distribution as 2D random and 20D normal respectively. Results of R-Tree are excluded
+as they are 20 times slower.
+
+PiTree remains to be the fastest until selectivity goes more than 50\%. Under high selectivity,
+full scan outperformes others as indexing structures cannot prune effectively and scanning
+time becomes the dominant part in lookup. The performance of both PiTree and KD-Tree degrades
+as selectivity increasing, but KD-Tree is more vulnerable to selectivity changes.
 
 \subsubsection{Dimension}
 
@@ -779,10 +826,21 @@ search speed to be 3 times slower.
   \caption{Average query time under different dimensions. Left figure is tested
   on random distribution with 0.01 selectivity while right figure is tested on normal distribution
   with 0.5 selectivity.
-  Results of R*-Tree are excluded since they are 20 times slower than others.}
+  Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
 
+Figure 8 shows the benchmark results under different dimensions where we fixed the
+distribution as random distribution with 0.01 selectivity and normal distribution with
+0.5 selectivity. Results of R-Tree are omitted for similar reason as above.
+
+As number of dimensions increases, the performance of KD-Tree degrades dramatically as
+the depth of the tree grows quickly. The query time of both PiTree and full scan increases
+linearly along with dimensions while PiTree remains to be the fastest indexing structure.
+
 \subsection{Parameter Tuning}
+
+This section studies the influence parameters used in PiTree (i.e. max fanout and page size)
+which is intented to guide our future work on cost model.
 
 \subsubsection{Max Fanout}
 
@@ -807,6 +865,12 @@ search speed to be 3 times slower.
   with a fixed page size of 1000}
 \end{figure*}
 
+Figure 9 shows the statistics collected by changing the max fanout. Both average
+hit ratio and refinement ratio become stable after max fanout reaches 5000. While
+the average tree traverse latency, which represents the effectiveness of pruning,
+first reaches a sub-optimal point and start to increase together with the max fanout.
+This results in a higher average query time as shown in the right most picture of Figure 9.
+
 \subsubsection{Page Size}
 
 \begin{figure*}[ht] 
@@ -830,41 +894,26 @@ search speed to be 3 times slower.
   with a fixed max fanout of 500}
 \end{figure*}
 
+Figure 10 shows the statistics collected by changing the page size which shows
+a similar trend as changing the max fanout in Figure 9 since a better partition
+can be achieved by either increasing the page size or tuning the max fanout. As
+the page size increases, average scan latency also increases because there more
+records to scan within each page while average tree traverse latency decreases
+and eventually leads to a faster query speed.
+
 \subsubsection{Combined View}
 
+Figure 11 shows a combined view of the influence of page size and max fanout towards
+average query time. Although larger max fanout and page size yields better query speed
+in general, the optimal parameter is 50K page size and 1K max fanout which falls in
+the middle. Therefore, a better idea is to solve the parameters as an optimization
+problem as described in section 7.2.
+
 \begin{figure}
-  \includegraphics[scale=0.6]{../figures/parameter/avg-qtime-3D}
+  \includegraphics[scale=0.6]{../figures/parameter/avg-qtime-3D2}
   \caption{Average query time with various max fanout and page size}
   \label{combined-view}
 \end{figure}
-
-\section{Related Work}
-
-Both the original learned index work, and a followup SageDB
-proposed applying a learned based approach to multidimensional indexing,
-but neither provided details \cite{Learned_Index,SageDB}.
-Recently, a multidimensional leanred index strucuture called Flood has been proposed  \cite{Flood}. 
-Flood is most similar to a grid file
-\cite{Grid-File}, which partitions the data in a grid-like fashion.
-Flood has a global axis-aligned projection and partitioning scheme,
-while Pi-Tree projects and partitions at a per-node basis. 
- 
-Many other multidimensional indexing schemes have been proposed
-over the past decades. R-Trees are popular for indexing spatial data,
-since they are capable of indexing regions and not only points \cite{R-Tree,R*-Tree}.
-For instance, PostGIS uses an R-Tree for indexing \cite{PostGIS}.
-However, as shown in the benchmarks, the R-Tree does not excel at 
-indexing points, especially in higher dimensions.
-
-Kd-Trees are popular for nearest neighbour queries 
-and can also perform range queries \cite{kd-Tree,ModernMDRQ}.
-Pi-Tree, with the round-robin projection policy, can be thought of as a combination
-of a kd-Tree and an RMI \cite{Learned_Index}. 
-An extension of the kd-Tree, called the cracking kd-tree adaptively
-changes its structure while processing queries in order to improve 
-the performance for subsequent queries \cite{CrackingKD-Tree}.
-These approaches use only local policies and do not incorporate the global distribution
-of the data.
 
 \section{Future Work}
 
