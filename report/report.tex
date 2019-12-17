@@ -122,7 +122,7 @@ in its structure.
 
 In this paper we present Pi-Tree, a learned multidimensional index designed for
 in-memory multidimensional range queries capable of indexing
-data of arbitrary dimension. PiTree extends in a natural way the recursive model index (RMI) structure
+data of arbitrary dimension. Pi-Tree extends in a natural way the recursive model index (RMI) structure
 from the original learned index paper to a multidimensional space.
 Our main contributions are:
 \begin{enumerate}
@@ -182,8 +182,6 @@ of the data.
 
 \section{Background}
 
-\subsection{Recursive Model Index}
-
 The recent work by Kraska et al. on learned indexes
 has cast the problem of single dimensional indexing in a new light \cite{Learned_Index}.
 Their key insight is that given the empirical cumulative distribution function
@@ -233,32 +231,29 @@ endpoint.
 
 As described in Section 2, the main idea of single dimensional learned index is to replace
 the traditional indexing structure like B-Tree with a machine learning model that is able
-to learn the underlying data distribution (see Figure 2). For point lookup, the learned index takes a key
-as input and predicts the position of the key in the data layout. The prediction does not
-necessarily to be exact as a quadratic search is introduced to correct the prediction error.
+to learn the underlying data distribution (see Figure \ref{single-dimensional-learned-index}).
+For point lookup, the learned index takes a key as input and predicts the position of the key 
+in the sorted data layout. Although there can be error in the prediction, it is corrected by a local search.
 
-Theoretically, the point lookup time for single dimensional learned index equals to time
-traversing the RMI plus time doing quadratic search. A model that can compute easily and predict
-accurately is the key to speed up point lookup. However, there is usually a trade off between
-model accuracy and computational cost in machine learning. For example, deep neural net is able
-to model complex data distribution but is also extremely expensive to compute. On the other hand,
-linear regression only involves one multiplication and one addition, but it only model linear
-distributed data effectively. Kraska adopted linear regression based RMI in their single dimension
-learned index mainly because the layout of single dimensional data is trivial such that it can be
-effectively learned by linear models. However, such property may not hold for high dimensional cases.
-Therefore, we think it worth first studying the trade off between model accuracy and model
-computational cost. The result may guide us on the choice of models. 
+Looking up a data point in RMI is comprised of a traversal and a local search. 
+A model that has low inference time and accurately models the data distribution would result in fast lookups.
+However, there is usually a trade off between model accuracy and inference time in machine learning. 
+For example, a deep neural net can better fit the data distribution but has costly inference.
+On the other hand, linear regression only involves one multiplication and one addition, but is only capable of 
+accurately modeling uniformly distributed data.
+Therefore, we think it is worth first studying the trade off between model accuracy and model
+complexity. The result may guide us on the choice of models. 
 
 \subsection{Experiment}
 
 We implemented our single dimensional learned index with a two-stage RMI as proposed in 
 Kraska's paper \cite{Learned_Index}. The two-stage RMI is configured to be able to accept
 any model that takes a key as input and generates a position as output such that we can
-plug in any machine learning model as needed. For simplicity, we only test on linear regression
-model and neural net with one hidden layer that has eight hidden nodes. A native B-Tree with no optimization is also implemented
-as the baseline. All indexing structures are implemented in Python as we do not care about the absolute
-performance in single dimensional case as long as the comparison is fair. Moreover, Python provides powerful
-machine learning modules such as tensorflow. 
+plug in any machine learning model as needed. For simplicity, we only test a linear regression
+model and a neural net with one hidden layer that has eight hidden nodes. 
+A B-Tree with no optimization is also implemented as the baseline. 
+For this section, all indexing structures are implemented in Python 
+since Python provides powerful machine learning modules such as tensorflow. 
 
 \begin{table}
   \centering
@@ -273,35 +268,28 @@ machine learning modules such as tensorflow.
     Build time(s) & 0.17 & 24.21 & 80.46 \\
     \hline 
   \end{tabular}
-  \caption{benchmark single dimensional learned index}
+  \caption{Single Dimensional Learned Index Benchmark. 
+  Prediction Error is the average distance between prediction and actual position over the total number of data points.)}
   \label{table:single-dimensional-learned-index-benchmark}
 \end{table}
 
-We benchmark our indexing structures on a random uniformly distributed single dimensional
-dataset with 100 thousand data points. Each point is queried exactly once in the benchmark.
+We benchmark our indexes on a uniformly distributed single dimensional
+dataset with a hundred thousand data points. Each point is queried exactly once in the benchmark.
 All tests are conducted under the same environment as described in Section 5.1. Table 1 shows
-the benchmark results of BTree, linear model based RMI and neural net based RMI. Although
-BTree appears to be the best indexing structure across all evaluation metrics, we believe the
-overhead is mainly due to the tensorflow module as, later on when we finish implementing Pi-Tree
-and linear regression in C++, the performance is suprisingly good.
+the benchmark results of B-Tree, linear model RMI and neural net RMI. Although
+B-Tree appears to be the best indexing structure across all evaluation metrics, we believe the
+overhead is mainly due to the tensorflow module.
 
-In terms of point lookup speed, neural net is about 20 times slower than linear regression model.
-This is as expected since we are using a neural net with 1 hidden layer and 8 hidden nodes which
-means for each prediction, neural net needs to do 16 linear regressions. Such high computational
-overhead also brings an improvement on prediction accuracy. Neural net reduces the prediction
-error (Average distance between prediction and actual position / Total data) by 0.13\%. However,
-such improvement is negligible as it can be easily corrected by quadratic search. Model prediction
-time becomes the dominant part in point lookup.
+The neural net RMI is about 20 times slower than the linear model RMI.
+We attribute the difference to the higher inference time of the neural net, which does not make up for
+the speed gains due to the more accurate prediction. Using a neural net reduces the prediction
+error by 0.13\%. However,
+such improvement is negligible as it can be easily corrected by local search. 
+Inference time becomes the dominant component in point lookup.
 
 \subsection{Lessons Learned}
 
-The success of single dimension learned index lies in the trivial data layout imposed by sorting.
-Mispredictions can be effectively corrected without much scan overhead. However, such a feature may
-not exist in high dimensional cases. Points that are close in high dimensional space may be projected
-far from each other in single dimensional space. Therefore, it is important to carefully design a
-projection function which can preserve the relative position between points.
-
-Since high dimensional data is more complex to learn, the choice of machine learning model also
+Since multidimensional data is more complex to learn, the choice of machine learning model also
 warrants discussion. Although the neural net approach has been shown to be able to predict more accurately, its
 large computational overhead is not negligible. The model used in RMI does not necessarily need to
 be very accurate but has to be easy to compute. Otherwise, traversing RMI will dominate the lookup.
@@ -612,12 +600,12 @@ Then we present the performance of Pi-Tree compared with other state of the art
 indexing methods on different datasets followed by an in-depth evaluation. 
 Overall the results show that:
 \begin{itemize}
-    \item PiTree is able to perform range query 2-3 times faster than the second
-    best indexing structure and over 20 times faster than R-Tree. PiTree also takes
+    \item Pi-Tree is able to perform range query 2-3 times faster than the second
+    best indexing structure and over 20 times faster than R-Tree. Pi-Tree also takes
     the shortest time to build under all distributions.
-    \item PiTree can reduce the memory usage by order of magnitude compared with
+    \item Pi-Tree can reduce the memory usage by order of magnitude compared with
     R-Tree and KD-Tree.
-    \item PiTree is robust to the change of dimensions and selectivity. Its performance
+    \item Pi-Tree is robust to the change of dimensions and selectivity. Its performance
     degrades gracefullly compared with other indexing structures and remains to be
     the fastest method.
 \end{itemize}
@@ -798,10 +786,10 @@ Table 2 summarizes the characteristics of datasets. Details are described as fol
 
 We first benchmark the building time, memory usage and query speed of Pi-Tree against
 other indexing structures under 3 distributions. Figure 4 shows the average query time of
-Pi-Tree is 2-3 times faster than the next closest indexing structure. Pi-Tree is beated by
+Pi-Tree is 2-3 times faster than the next closest indexing structure. Pi-Tree is surpassed by
 KD-Tree under zipfian distribution where data is highly skewed and cannot be learned effectively
 by linear regression. A print of Pi-Tree shows that it tries to learn the whole distribution
-with a single node which results in large prediciton errors.
+with a single node which results in large prediction errors.
 
 In terms of memory usage (see Table 3), Pi-Tree is able to reduce the memory usage by 2-3 order of magnitude
 since it significantly reduce the depth of the tree by utilitizing linear regression with fanout and
@@ -813,7 +801,7 @@ faster than R-Tree as shown in Figure 5. Such building time is independent from 
 Figure 6 shows the prediciton error distribution that helps to understand the performance
 difference of Pi-Tree under different distributions. It's not suprising to see that Pi-Tree
 models random uniform distribution best with an error bounded by 25 entries. The error under
-normal distribution is also reasonable and can be corrected within several steps of quadratic
+normal distribution is also reasonable and can be corrected within several steps of local
 search. While the error for zipfian distribution goes beyond 300 entries and results in the
 search speed to be 3 times slower.
 
@@ -861,8 +849,8 @@ search speed to be 3 times slower.
 
 \subsection{Scalability}
 
-To show the scalability of PiTree, we benchmark our indexing structures on different
-query selectivities and dimensions. The results show that our PiTree is robust to the
+To show the scalability of Pi-Tree, we benchmark our indexing structures on different
+query selectivities and dimensions. The results show that our Pi-Tree is robust to the
 scale of query selectivity and dimensions.
 
 \subsubsection{Query Selectivity}
@@ -871,9 +859,9 @@ Figure 7 shows the benchmark results under different selectivities where we fixe
 distribution as 2D random and 20D normal respectively. Results of R-Tree are excluded
 as they are 20 times slower.
 
-PiTree remains to be the fastest until selectivity goes more than 50\%. Under high selectivity,
+Pi-Tree remains to be the fastest until selectivity goes more than 50\%. Under high selectivity,
 full scan outperformes others as indexing structures cannot prune effectively and scanning
-time becomes the dominant part in lookup. The performance of both PiTree and KD-Tree degrades
+time becomes the dominant part in lookup. The performance of both Pi-Tree and KD-Tree degrades
 as selectivity increasing, but KD-Tree is more vulnerable to selectivity changes.
 
 \subsubsection{Dimension}
@@ -883,12 +871,12 @@ distribution as random distribution with 0.01 selectivity and normal distributio
 0.5 selectivity. Results of R-Tree are omitted for similar reason as above.
 
 As number of dimensions increases, the performance of KD-Tree degrades dramatically as
-the depth of the tree grows quickly. The query time of both PiTree and full scan increases
-linearly along with dimensions while PiTree remains to be the fastest indexing structure.
+the depth of the tree grows quickly. The query time of both Pi-Tree and full scan increases
+linearly along with dimensions while Pi-Tree remains to be the fastest indexing structure.
 
 \subsection{Parameter Tuning}
 
-This section studies the influence parameters used in PiTree (i.e. max fanout and page size)
+This section studies the influence parameters used in Pi-Tree (i.e. max fanout and page size)
 which is intented to guide our future work on cost model.
 
 \subsubsection{Max Fanout}
