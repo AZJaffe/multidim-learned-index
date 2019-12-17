@@ -74,7 +74,7 @@
   \state{Ontario}
 }
 
-\author{Xiyeng Feng}
+\author{Xiyang Feng}
 \email{x74feng@uwaterloo.ca}
 \affiliation{%
   \institution{University of Waterloo}
@@ -233,7 +233,7 @@ endpoint.
 
 As described in Section 2, the main idea of single dimensional learned index is to replace
 the traditional indexing structure like B-Tree with a machine learning model that is able
-to learn the underlying data distribution. For point lookup, the learned index takes a key
+to learn the underlying data distribution (see Figure 2). For point lookup, the learned index takes a key
 as input and predicts the position of the key in the data layout. The prediction does not
 necessarily to be exact as a quadratic search is introduced to correct the prediction error.
 
@@ -612,7 +612,14 @@ Then we present the performance of Pi-Tree compared with other state of the art
 indexing methods on different datasets followed by an in-depth evaluation. 
 Overall the results show that:
 \begin{itemize}
-    \item TODO
+    \item PiTree is able to perform range query 2-3 times faster than the second
+    best indexing structure and over 20 times faster than R-Tree. PiTree also takes
+    the shortest time to build under all distributions.
+    \item PiTree can reduce the memory usage by order of magnitude compared with
+    R-Tree and KD-Tree.
+    \item PiTree is robust to the change of dimensions and selectivity. Its performance
+    degrades gracefullly compared with other indexing structures and remains to be
+    the fastest method.
 \end{itemize}
 
 \subsection{Experiment Setup}
@@ -646,6 +653,49 @@ as follow.
     provided by libspatialindex.\cite{libSpatialIndex}
 
 \end{itemize}
+
+%% TODO update plot title
+\begin{figure*}[t] 
+  \label{overall-performance-qtime} 
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/random-qtime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/normal-qtime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/zipf-qtime} 
+    \vspace{4ex}
+  \end{minipage}
+  \caption{Average query time for random, normal and zipf distribution (from left to right). 
+  All datasets has a dimension of 2 and a selectivity of 0.1}
+\end{figure*}
+
+\begin{figure*}[t] 
+  \label{overall-performance-btime} 
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/random-btime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/normal-btime} 
+    \vspace{4ex}
+  \end{minipage}%%
+  \begin{minipage}[b]{0.33\linewidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{../figures/overall-performance/zipf-btime} 
+    \vspace{4ex}
+  \end{minipage}
+  \caption{Average build time for random, normal and zipf distribution (from left to right). 
+  All datasets has a dimension of 2 and a selectivity of 0.1}
+\end{figure*}
 
 \subsection{Datasets}
 
@@ -829,20 +879,26 @@ as selectivity increasing, but KD-Tree is more vulnerable to selectivity changes
   Results of R-Tree are excluded since they are 20 times slower than others.}
 \end{figure*}
 
-Figure 8 shows the benchmark results under different dimensions where we fixed the
-distribution as random distribution with 0.01 selectivity and normal distribution with
-0.5 selectivity. Results of R-Tree are omitted for similar reason as above.
+We first benchmark the building time, memory usage and query speed of Pi-Tree against
+other indexing structures under 3 distributions. Figure 4 shows the average query time of
+Pi-Tree is 2-3 times faster than the next closest indexing structure. Pi-Tree is beated by
+KD-Tree under zipfian distribution where data is highly skewed and cannot be learned effectively
+by linear regression. A print of Pi-Tree shows that it tries to learn the whole distribution
+with a single node which results in large prediciton errors.
 
-As number of dimensions increases, the performance of KD-Tree degrades dramatically as
-the depth of the tree grows quickly. The query time of both PiTree and full scan increases
-linearly along with dimensions while PiTree remains to be the fastest indexing structure.
+In terms of memory usage (see Table 3), Pi-Tree is able to reduce the memory usage by 2-3 order of magnitude
+since it significantly reduce the depth of the tree by utilitizing linear regression with fanout and
+page size. The size of Pi-Tree various across different distributions as it will learn a reasonable number
+of node for a particular distribution. In Table 3, the size of Pi-Tree is only 0.1KB for zipf
+distribution as it only create one node for the whole distribution. Pi-Tree is also able to load data and build the tree 2 times faster than KD-Tree and over 20 times
+faster than R-Tree as shown in Figure 5. Such building time is independent from distributions.
 
-\subsection{Parameter Tuning}
-
-This section studies the influence parameters used in PiTree (i.e. max fanout and page size)
-which is intented to guide our future work on cost model.
-
-\subsubsection{Max Fanout}
+Figure 6 shows the prediciton error distribution that helps to understand the performance
+difference of Pi-Tree under different distributions. It's not suprising to see that Pi-Tree
+models random uniform distribution best with an error bounded by 25 entries. The error under
+normal distribution is also reasonable and can be corrected within several steps of quadratic
+search. While the error for zipfian distribution goes beyond 300 entries and results in the
+search speed to be 3 times slower.
 
 \begin{figure*}[ht] 
   \label{parameter-fix-pageSize} 
@@ -894,6 +950,48 @@ This results in a higher average query time as shown in the right most picture o
   with a fixed max fanout of 500}
 \end{figure*}
 
+\subsection{Scalability}
+
+To show the scalability of PiTree, we benchmark our indexing structures on different
+query selectivities and dimensions. The results show that our PiTree is robust to the
+scale of query selectivity and dimensions.
+
+\subsubsection{Query Selectivity}
+
+Figure 7 shows the benchmark results under different selectivities where we fixed the
+distribution as 2D random and 20D normal respectively. Results of R-Tree are excluded
+as they are 20 times slower.
+
+PiTree remains to be the fastest until selectivity goes more than 50\%. Under high selectivity,
+full scan outperformes others as indexing structures cannot prune effectively and scanning
+time becomes the dominant part in lookup. The performance of both PiTree and KD-Tree degrades
+as selectivity increasing, but KD-Tree is more vulnerable to selectivity changes.
+
+\subsubsection{Dimension}
+
+Figure 8 shows the benchmark results under different dimensions where we fixed the
+distribution as random distribution with 0.01 selectivity and normal distribution with
+0.5 selectivity. Results of R-Tree are omitted for similar reason as above.
+
+As number of dimensions increases, the performance of KD-Tree degrades dramatically as
+the depth of the tree grows quickly. The query time of both PiTree and full scan increases
+linearly along with dimensions while PiTree remains to be the fastest indexing structure.
+
+\subsection{Parameter Tuning}
+
+This section studies the influence parameters used in PiTree (i.e. max fanout and page size)
+which is intented to guide our future work on cost model.
+
+\subsubsection{Max Fanout}
+
+Figure 9 shows the statistics collected by changing the max fanout. Both average
+hit ratio and refinement ratio become stable after max fanout reaches 5000. While
+the average tree traverse latency, which represents the effectiveness of pruning,
+first reaches a sub-optimal point and start to increase together with the max fanout.
+This results in a higher average query time as shown in the right most picture of Figure 9.
+
+\subsubsection{Page Size}
+
 Figure 10 shows the statistics collected by changing the page size which shows
 a similar trend as changing the max fanout in Figure 9 since a better partition
 can be achieved by either increasing the page size or tuning the max fanout. As
@@ -907,7 +1005,7 @@ Figure 11 shows a combined view of the influence of page size and max fanout tow
 average query time. Although larger max fanout and page size yields better query speed
 in general, the optimal parameter is 50K page size and 1K max fanout which falls in
 the middle. Therefore, a better idea is to solve the parameters as an optimization
-problem as described in section 7.2.
+problem as described in section 7.
 
 \begin{figure}
   \includegraphics[scale=0.6]{../figures/parameter/avg-qtime-3D2}
