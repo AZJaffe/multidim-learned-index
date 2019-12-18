@@ -108,7 +108,9 @@ results benchmarkPiTree(benchmark<D> & b, uint maxFanout, uint pageSize) {
     auto start = chrono::steady_clock::now();
     PiTree<D,int> t = PiTree<D, int>(b.data, maxFanout, pageSize);
     r.loadTime = chrono::steady_clock::now() - start;
-
+    cout << "**********************" << endl;
+    cout << t.memorySize() << endl; // bug
+    cout << "**********************" << endl;
     t.printTreeStats();
 
     start = chrono::steady_clock::now();
@@ -159,7 +161,7 @@ results benchmarkRTree(benchmark<D> & b) {
     r.name = "R*-Tree";
     auto start = chrono::steady_clock::now();
     // CustomRTree<D,int> rt = CustomRTree<D, int>(b.data);
-    CustomRTree<D,int> rt = CustomRTree<D,int>("../data/2D-random/points.csv");
+    CustomRTree<D,int> rt = CustomRTree<D,int>("../data/" + b.name + "/points.csv");
     cout << "RTree finished building" << endl;
     r.loadTime = chrono::steady_clock::now() - start;
     start = chrono::steady_clock::now();
@@ -201,13 +203,12 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
     printBenchmarkInformation(b);
     auto fullScanResults = benchmarkFullScan(b);
     // auto kdTreeResults = benchmarkKDTree(b);
-    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
     // auto RTreeResults = benchmarkRTree(b);
+    auto piTreeResults = benchmarkPiTree(b, maxFanout, pageSize);
     printResults(fullScanResults, b);
     // printResults(kdTreeResults, b);
-    printResults(piTreeResults, b);
     // printResults(RTreeResults, b); 
-    printResults(fullScanResults, b);
+    printResults(piTreeResults, b);
     for(size_t i = 0; i < fullScanResults.resultSetSize.size(); i++) {
         assert(fullScanResults.resultSetSize[i] == piTreeResults.resultSetSize[i]);
         // assert(fullScanResults.resultSetSize[i] == kdTreeResults.resultSetSize[i]);
@@ -216,7 +217,7 @@ void evaluate(string distribution, uint numData, uint numQueries, uint maxFanout
 }
 
 int main(void) {
-    // evaluate("random", 1e6, 1e3, 1e3, 5e3);
-     evaluate("normal", 1e6, 1e3, 1e3, 5e2);
+    evaluate("0.1S-random", 1e6, 1e3, 1e1, 5e1);
+    // evaluate("normal", 1e6, 1e3, 1e3, 5e2);
     // evaluate("mix-Gauss", 1e6, 1e3, 1e3, 5e2);
 }
