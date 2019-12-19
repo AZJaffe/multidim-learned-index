@@ -33,6 +33,8 @@
 using namespace std;
 using namespace std::chrono;
 
+vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout);
+
 // D is the dimension of the key of the data, V is the type of the data values
 template <uint D, typename V>
 class PiTree {
@@ -193,6 +195,7 @@ data(data), maxFanout(maxFanout), pageSize(pageSize) {
 
 template <uint D, typename V>
 typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uint depth) {
+    assert(start <= end);
     TPRINT("Building subtree with start=" << start << " end=" << end);
     node * n = new node();
     n->start = start;
@@ -217,34 +220,27 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         return n;
     }
     n->fanout = min(maxFanout, FANOUT_FACTOR * (uint)ceil((double)(end - start) / pageSize));
-    uint childStart = start;
-    double childMaxVal = 1.0 / n->fanout;
-    double maxValIncrement = childMaxVal;
-    for(uint i = start; i < end; i++) {
-        double p = n->model.predict(
-            n->project(data[i].first)
-        );
-        while (p >= childMaxVal) {
-            if (i - childStart > 0) {
-                n->children.push_back(
-                    buildSubTree(childStart, i, depth+1)
-                );
-            } else {
-                n->children.push_back(nullptr);
-            }
-            childStart = i;
-            if (n->children.size() == n->fanout - 1) {
-                childMaxVal = numeric_limits<double>::max();
-            } else {
-                childMaxVal += maxValIncrement;
-            }
-        }
+    vector<double> predictions;
+    for(auto it = data.begin() + n->start; it != data.begin() + n->end; it++) {
+        predictions.push_back(n->model.predict(
+            n->project(it->first)
+        ));
     }
-    // n->children.size() might not equal the fanout
-    // e.g. if the fanout is 2 and the predictions for all datapoints lie within [0, 0.2], there will only be one child.
-    n->children.push_back(
-        buildSubTree(childStart, end, depth+1)
-    );
+
+    auto partitions = partitionRange(predictions, n->fanout);
+    uint childStart = n->start;
+    size_t childEnd, num;
+    for(auto it = partitions.begin(); it != partitions.end(); it++) {
+        childEnd = it->first + n->start;
+        num = it->second;
+        node * c = buildSubTree(childStart, childEnd, depth + 1);
+        while(num-- > 0) {
+            n->children.push_back(c);
+        }
+        childStart = childEnd;
+    }
+    assert(n->children.size() == n->fanout);
+
     return n;
 }
 
@@ -370,6 +366,32 @@ void PiTree<D,V>::pairSort(node & n) {
         data[i+n.start] = paired[i].second;
     }
     return;
+}
+
+
+vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout) {
+    double maxVal = 1.0 / fanout;
+    double maxValIncrement = maxVal;
+    vector<size_t> partitions;
+    for(auto it = d.begin(); it != d.end(); it++) {
+        while (*it >= maxVal) {
+            partitions.push_back(it - d.begin());
+            if (partitions.size() == fanout - 1) {
+                maxVal = numeric_limits<double>::max();
+            } else {
+                maxVal += maxValIncrement;
+            }
+        }
+    }
+    while(partitions.size() < fanout) {
+        partitions.push_back(d.size());
+    }
+    assert(partitions.size() == fanout);
+    vector<pair<size_t, size_t>> ret;
+    for(auto it = partitions.begin(); it != partitions.end(); it++) {
+        ret.push_back(make_pair(*it, 1));
+    }
+    return ret;
 }
 
 template <uint D, typename V>
