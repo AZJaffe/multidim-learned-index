@@ -144,10 +144,44 @@ void testRangeQuery(bool debug = false) {
     delete t;
 }
 
+void __partitionRangeTest(vector<double> input, vector<pair<size_t,size_t>> expected, size_t fanout) {
+    auto actual = partitionRange(input, fanout);
+    assert(actual.size() == expected.size());
+    for(size_t i = 0; i < expected.size(); i++) {
+        assert(actual[i].first == expected[i].first);
+        assert(actual[i].second == expected[i].second);
+    }
+}
+
+void partitionRangeTest() {
+    // Empty input
+    auto input = vector<double>();
+    vector<pair<size_t,size_t>> expected = {
+        {0,1}, {0,1}, {0,1}
+    };
+    __partitionRangeTest(input, expected, 3);
+
+    // Empty middle bucket
+    input = {-1, -0.5, -0.25, 0, 0.2, 0.25, 1.5, 2, 3};
+    expected = {
+        {6,1}, {6,1}, {9,1}
+    };
+    __partitionRangeTest(input, expected, 3);
+
+    // Empty first and last bucket
+    input = {0.25, 0.3, 0.35, 0.4, 0.45, 0.49};
+    expected = {
+        {0,1}, {6,1}, {6,1}, {6,1}
+    };
+    __partitionRangeTest(input, expected, 4);
+
+}
+
 int main(void) {
     testPairSort();
     testTreeBuild();
     testTreeBuild2();
     testPointQuery();
     testRangeQuery();
+    partitionRangeTest();
 }
