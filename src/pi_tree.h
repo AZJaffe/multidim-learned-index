@@ -33,7 +33,7 @@
 using namespace std;
 using namespace std::chrono;
 
-vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout);
+vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout, size_t pageSize);
 
 // D is the dimension of the key of the data, V is the type of the data values
 template <uint D, typename V>
@@ -227,7 +227,7 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
         ));
     }
 
-    auto partitions = partitionRange(predictions, n->fanout);
+    auto partitions = partitionRange(predictions, n->fanout, pageSize);
     uint childStart = n->start;
     size_t childEnd, num;
     for(auto it = partitions.begin(); it != partitions.end(); it++) {
@@ -369,9 +369,10 @@ void PiTree<D,V>::pairSort(node & n) {
 }
 
 
-vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout) {
+vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout, size_t pageSize) {
     double maxVal = 1.0 / fanout;
     double maxValIncrement = maxVal;
+    // First find the boundaries
     vector<size_t> partitions;
     for(auto it = d.begin(); it != d.end(); it++) {
         while (*it >= maxVal) {
@@ -387,10 +388,34 @@ vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout) {
         partitions.push_back(d.size());
     }
     assert(partitions.size() == fanout);
+    // Second merge the partitions to remove small ones
     vector<pair<size_t, size_t>> ret;
+    size_t start = 0;
+    size_t numSkipped = 0;
     for(auto it = partitions.begin(); it != partitions.end(); it++) {
-        ret.push_back(make_pair(*it, 1));
+        if (*it - start >= pageSize) {
+            if (numSkipped > 0) {
+                start = *(it - 1);
+                ret.push_back(make_pair(start, numSkipped));
+                numSkipped = 0;
+                // Need to recheck this partition.
+                it = it - 1; 
+            } else {
+                ret.push_back(make_pair(*it, 1));
+            }
+        } else {
+            numSkipped++;
+        }
     }
+    if (numSkipped > 0) {
+        ret.push_back(make_pair(d.size(), numSkipped));
+    }
+    assert(ret.back().first == d.size());
+    size_t total = 0;
+    for(auto it = ret.begin(); it != ret.end(); it++) {
+        total += it->second;
+    }
+    assert(total == fanout);
     return ret;
 }
 
