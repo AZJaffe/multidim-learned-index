@@ -41,7 +41,8 @@ class PiTree {
     typedef pair<array<double, D>, V> datum;
 
     vector<datum> &data; // Data is an array of arrays of doubles of size D
-    uint maxFanout; 
+    uint maxFanout; // For now, this is constant
+    uint height; // e.g. a tree where the node is a leaf has height 1
     uint pageSize; // This is the upper bound on the page size.
 
     struct node {
@@ -137,8 +138,7 @@ class PiTree {
     void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n, microseconds & refine, microseconds & scan);
     size_t depth(node * n);
     bool isLeaf(node * n) {
-        return n->end - n->start <= pageSize ||
-            n->fanout < 2;
+        return n->end - n->start <= pageSize;
     }
     size_t getPredictionErrorIdx(uint predicted, uint actual) {
         if(predicted - actual == 0) {
@@ -227,10 +227,11 @@ typename PiTree<D,V>::node * PiTree<D,V>::buildSubTree(uint start, uint end, uin
     }
     n->model = builder.fit();
     TPRINT("regressor=(" << n->model.slope << "x + " << n->model.bias << ")");
-    n->fanout = min(maxFanout, FANOUT_FACTOR * (uint)ceil((double)(end - start) / pageSize));
     if (isLeaf(n)) {
+        n->fanout = 0;
         return n;
     }
+    n->fanout = min(maxFanout, FANOUT_FACTOR * (uint)ceil((double)(end - start) / pageSize));
     vector<double> predictions;
     for(auto it = data.begin() + n->start; it != data.begin() + n->end; it++) {
         predictions.push_back(n->model.predict(
@@ -496,8 +497,8 @@ void PiTree<D,V>::printTreeStats() {
     // historgrams with 10 buckets
     const size_t nFanoutBuckets = 100;
     const size_t nRangeBuckets = 10;
-    size_t fanoutBuckets[nFanoutBuckets] = { 0 };
-    size_t rangeBuckets[nRangeBuckets] = { 0 };
+    size_t * fanoutBuckets = new size_t[nFanoutBuckets]();
+    size_t * rangeBuckets = new size_t[nRangeBuckets]();
 
     for(auto it = s.depthOfLeaf.begin(); it != s.depthOfLeaf.end(); it++) {
         depth[*it]++;
@@ -541,6 +542,8 @@ void PiTree<D,V>::printTreeStats() {
     }
 
     delete[] depth;
+    delete[] fanoutBuckets;
+    delete[] rangeBuckets;
 }
 
 template <uint D, typename V>
