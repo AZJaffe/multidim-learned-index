@@ -175,13 +175,26 @@ void partitionRangeTest() {
     };
     __partitionRangeTest(input, expected, 4, 1);
 
+    // When pageSize is large, all points are part of the
+    // same partition
+    input = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
+    expected = {
+        {6, 4}
+    };
+    __partitionRangeTest(input, expected, 4, 100);
+
+    input = {0.1, 0.2, 0.3, 0.6};
+    expected = {
+        {3, 2}, {4, 2}
+    };
+    __partitionRangeTest(input, expected, 4, 3);
 }
 
 int main(void) {
-    // testPairSort();
-    // testTreeBuild();
-    // testTreeBuild2();
-    // testPointQuery();
-    // testRangeQuery();
+    testPairSort();
+    testTreeBuild();
+    testTreeBuild2();
+    testPointQuery();
+    testRangeQuery();
     partitionRangeTest();
 }

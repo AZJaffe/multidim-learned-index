@@ -54,8 +54,12 @@ class PiTree {
         uint end;
         node() : model(LinearModel(0,0)) {}
         ~node() {
+            node * last = nullptr;
             for(auto n : children) {
-                delete n;
+                if (n != last) {
+                    delete n;
+                }
+                last = n;
             }
         }
         double project(array<double, D> &d) {
@@ -72,15 +76,23 @@ class PiTree {
         size_t memorySize() {
             size_t s = sizeof(node);
             s += children.capacity() * sizeof(node *);
-            for(uint i = 0; i < children.size(); i++) {
-                s += children[i]->memorySize();
+            node * last = nullptr;
+            for(auto n : children) {
+                if (n != last) {
+                    s += n->memorySize();
+                }
+                last = n;
             }
             return s;
         }
         uint size() {
             uint ret = 1;
-            for(uint i = 0; i < children.size(); i++) {
-                ret += children[i]->size();
+            node * last = nullptr;
+            for(auto n : children) {
+                if (n != last) {
+                    ret += n->size();
+                }
+                last = n;
             }
             return ret;
         }
@@ -126,7 +138,7 @@ class PiTree {
     void rangeQuery(vector<datum> &ret, array<double, D> min, array<double, D> max, node * n, microseconds & refine, microseconds & scan);
     size_t depth(node * n);
     bool isLeaf(node * n) {
-        return n->end - n->start < pageSize;
+        return n->end - n->start <= pageSize;
     }
     size_t getPredictionErrorIdx(uint predicted, uint actual) {
         if(predicted - actual == 0) {
@@ -309,9 +321,12 @@ void PiTree<D,V>::rangeQuery(vector<typename PiTree<D,V>::datum> &ret, array<dou
         uint minChildIndex = n->getChildIndex(minProjection);
         uint maxChildIndex = n->getChildIndex(maxProjection);
 
+        node * last = nullptr;
         for(auto it = n->children.begin() + minChildIndex; it <= n->children.begin() + maxChildIndex; it++) {
-            if (*it == nullptr) continue;
-            rangeQuery(ret, min, max, *it, refine, scan);
+            if (last != *it) {
+                rangeQuery(ret, min, max, *it, refine, scan);
+            }
+            last = n;
         }
         return;
     }
@@ -393,7 +408,7 @@ vector<pair<size_t, size_t>> partitionRange(vector<double> d, size_t fanout, siz
     size_t start = 0;
     size_t numSkipped = 0;
     for(auto it = partitions.begin(); it != partitions.end(); it++) {
-        if (*it - start >= pageSize) {
+        if (*it - start > pageSize) {
             if (numSkipped > 0) {
                 start = *(it - 1);
                 ret.push_back(make_pair(start, numSkipped));
@@ -446,15 +461,8 @@ void PiTree<D,V>::printSubTree(node * n, uint depth, bool printData) {
         }
     }
     if(!isLeaf(n)) {
-        uint i = 0;
-        for(; i < n->children.size(); i++) {
-            printSubTree(n->children[i], depth+1, printData);
-        }
-        // The number of children might be less than the fanout
-        // For the rest, just print empty ranges.
-        for(; i < n->fanout; i++) {
-            cout << string((1 + (int)depth) * 2, ' ') << "- ";
-            cout << "range=[" << n->end << ", " << n->end << ")" << endl;
+        for(auto n : n->children) {
+            printSubTree(n, depth+1, printData);
         }
     }
 }
@@ -550,9 +558,12 @@ void PiTree<D,V>::collectStructureData(PiTree<D,V>::structureData & s, PiTree<D,
     } else {
         s.numInternal++;
         s.fanoutOfInternal.push_back(n->fanout);
-        for(auto it = n->children.begin(); it != n->children.end(); it++) {
-            if(*it == nullptr) continue;
-            collectStructureData(s, *it, depth + 1);
+        node * last = nullptr;
+        for(auto n : n->children) {
+            if (n != last) {
+                collectStructureData(s, n, depth + 1);
+            }
+            last = n;
         }
     }
 }
